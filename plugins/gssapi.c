@@ -1276,7 +1276,7 @@ static sasl_server_plug_t gssapi_server_plugins[] =
     },
     {
 	"GSS-EAP",			/* mech_name */
-	256,			        /* max_ssf */
+	128,			        /* max_ssf */
 	SASL_SEC_NOPLAINTEXT
 	| SASL_SEC_NOACTIVE
 	| SASL_SEC_MUTUAL_AUTH,		/* security_flags */

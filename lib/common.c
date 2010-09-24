@@ -970,6 +970,18 @@ int sasl_getprop(sasl_conn_t *conn, int propnum, const void **pvalue)
       else
 	  *((const char **)pvalue) = conn->oparams.client_creds;
       break;
+  case SASL_GSS_PEER_NAME:
+      if(! conn->oparams.gss_peer_name)
+	  result = SASL_NOTDONE;
+      else
+	  *((const char **)pvalue) = conn->oparams.gss_peer_name;
+      break;
+  case SASL_GSS_LOCAL_NAME:
+      if(! conn->oparams.gss_peer_name)
+	  result = SASL_NOTDONE;
+      else
+	  *((const char **)pvalue) = conn->oparams.gss_local_name;
+      break;
   case SASL_SSF_EXTERNAL:
       *((const sasl_ssf_t **)pvalue) = &conn->external.ssf;
       break;
@@ -1190,6 +1202,12 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
       }
       break;
 
+  case SASL_GSS_CREDS:
+    if (conn->type == SASL_CONN_SERVER)
+        ((sasl_server_conn_t *)conn)->sparams->gss_creds = (void *)value;
+    else
+        ((sasl_client_conn_t *)conn)->cparams->gss_creds = (void *)value;
+    break;
   default:
       sasl_seterror(conn, 0, "Unknown parameter type");
       result = SASL_BADPARAM;

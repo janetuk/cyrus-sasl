@@ -58,6 +58,8 @@
 #include <netdb.h>
 
 #include <sasl.h>
+#include <gssapi/gssapi.h>
+#include <gssapi/gssapi_ext.h>
 
 #include "common.h"
 
@@ -70,6 +72,11 @@
 #ifndef IPV6_BINDV6ONLY
 #undef      IPV6_V6ONLY
 #endif
+
+static OM_uint32
+enumerateAttributes(OM_uint32 *minor,
+                    gss_name_t name,
+                    int noisy);
 
 /* create a socket listening on port 'port' */
 /* if af is PF_UNSPEC more than one socket may be returned */
@@ -170,6 +177,7 @@ int mysasl_negotiate(FILE *in, FILE *out, sasl_conn_t *conn)
     int len;
     int r = SASL_FAIL;
     const char *userid;
+    gss_name_t peer = GSS_C_NO_NAME;
     
     /* generate the capability list */
     if (mech) {
@@ -272,6 +280,12 @@ int mysasl_negotiate(FILE *in, FILE *out, sasl_conn_t *conn)
 
     r = sasl_getprop(conn, SASL_USERNAME, (const void **) &userid);
     printf("successful authentication '%s'\n", userid);
+
+    r = sasl_getprop(conn, SASL_GSS_PEER_NAME, (const void **) &peer);
+    if (peer != GSS_C_NO_NAME) {
+        OM_uint32 minor;
+        enumerateAttributes(&minor, peer, 1);
+    }
 
     return 0;
 }
@@ -425,4 +439,118 @@ int main(int argc, char *argv[])
     }
 
     sasl_done();
+}
+
+static void displayStatus_1(m, code, type)
+    char *m;
+    OM_uint32 code;
+    int type;
+{
+    OM_uint32 maj_stat, min_stat;
+    gss_buffer_desc msg;
+    OM_uint32 msg_ctx;
+
+    msg_ctx = 0;
+    while (1) {
+        maj_stat = gss_display_status(&min_stat, code,
+                                      type, GSS_C_NULL_OID,
+                                      &msg_ctx, &msg);
+        fprintf(stderr, "%s: %s\n", m, (char *)msg.value);
+        (void) gss_release_buffer(&min_stat, &msg);
+
+        if (!msg_ctx)
+            break;
+    }
+}
+
+static void displayStatus(msg, maj_stat, min_stat)
+    char *msg;
+    OM_uint32 maj_stat;
+    OM_uint32 min_stat;
+{
+    displayStatus_1(msg, maj_stat, GSS_C_GSS_CODE);
+    displayStatus_1(msg, min_stat, GSS_C_MECH_CODE);
+}
+
+static void
+dumpAttribute(OM_uint32 *minor,
+              gss_name_t name,
+              gss_buffer_t attribute,
+              int noisy)
+{
+    OM_uint32 major, tmp;
+    gss_buffer_desc value;
+    gss_buffer_desc display_value;
+    int authenticated = 0;
+    int complete = 0;
+    int more = -1;
+    unsigned int i;
+
+    while (more != 0) {
+        value.value = NULL;
+        display_value.value = NULL;
+
+        major = gss_get_name_attribute(minor,
+                                       name,
+                                       attribute,
+                                       &authenticated,
+                                       &complete,
+                                       &value,
+                                       &display_value,
+                                       &more);
+        if (GSS_ERROR(major)) {
+            displayStatus("gss_get_name_attribute", major, *minor);
+            break;
+        }
+
+        printf("Attribute %.*s %s %s\n\n%.*s\n",
+               (int)attribute->length, (char *)attribute->value,
+               authenticated ? "Authenticated" : "",
+               complete ? "Complete" : "",
+               (int)display_value.length, (char *)display_value.value);
+
+        if (noisy) {
+            for (i = 0; i < value.length; i++) {
+                if ((i % 32) == 0)
+                    printf("\n");
+                printf("%02x", ((char *)value.value)[i] & 0xFF);
+            }
+            printf("\n\n");
+        }
+
+        gss_release_buffer(&tmp, &value);
+        gss_release_buffer(&tmp, &display_value);
+    }
+}
+
+static OM_uint32
+enumerateAttributes(OM_uint32 *minor,
+                    gss_name_t name,
+                    int noisy)
+{
+    OM_uint32 major, tmp;
+    int name_is_MN;
+    gss_OID mech = GSS_C_NO_OID;
+    gss_buffer_set_t attrs = GSS_C_NO_BUFFER_SET;
+    unsigned int i;
+
+    major = gss_inquire_name(minor,
+                             name,
+                             &name_is_MN,
+                             &mech,
+                             &attrs);
+    if (GSS_ERROR(major)) {
+        displayStatus("gss_inquire_name", major, *minor);
+        return major;
+    }
+
+    if (attrs != GSS_C_NO_BUFFER_SET) {
+        for (i = 0; i < attrs->count; i++)
+            dumpAttribute(minor, name, &attrs->elements[i], noisy);
+    }
+
+    gss_release_oid(&tmp, &mech);
+    gss_release_buffer_set(&tmp, &attrs);
+
+    return major;
 }

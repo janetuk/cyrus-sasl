@@ -193,8 +193,8 @@ typedef struct sasl_out_params {
     void *client_creds;
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *spare_ptr2;
-    void *spare_ptr3;
+    void *gss_peer_name;
+    void *gss_local_name;
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
@@ -254,7 +254,7 @@ typedef struct sasl_client_params {
     sasl_ssf_t external_ssf;	/* external SSF active */
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *spare_ptr1;
+    void *gss_creds;
     void *spare_ptr2;
     void *spare_ptr3;
     void *spare_ptr4;
@@ -550,7 +550,7 @@ typedef struct sasl_server_params {
     struct propctx *propctx;
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *spare_ptr1;
+    void *gss_creds;
     void *spare_ptr2;
     void *spare_ptr3;
     void *spare_ptr4;

@@ -51,6 +51,7 @@
 #include <gssapi/gssapi.h>
 #endif
 
+#include <gssapi/gssapi_ext.h>
 #ifdef WIN32
 #  include <winsock2.h>
 
@@ -139,10 +140,18 @@ static void *gss_mutex = NULL;
 #define GSS_UNLOCK_MUTEX(utils)
 #endif
 
+static gss_OID_desc gss_spnego_mechanism_oid_desc =
+        {6, (void *)"\x2b\x06\x01\x05\x05\x02"};
+static gss_OID_desc gss_krb5_mechanism_oid_desc =
+        {9, (void *)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x02"};
+static gss_OID_desc gss_eap_mechanism_oid_desc =
+        {9, (void *)"\x2b\x06\x01\x04\x01\xa9\x4a\x15\x01" };
+
 typedef struct context {
     int state;
     
     gss_ctx_id_t gss_ctx;
+
     gss_name_t   client_name;
     gss_name_t   server_name;
     gss_cred_id_t server_creds;
@@ -168,6 +177,9 @@ typedef struct context {
     
     char *authid; /* hold the authid between steps - server */
     const char *user;   /* hold the userid between steps - client */
+
+    gss_OID mech;
+    int rfc2222_gss : 1;
 } context_t;
 
 enum {
@@ -190,7 +202,7 @@ sasl_gss_seterror_(const sasl_utils_t *utils, OM_uint32 maj, OM_uint32 min,
     OM_uint32 msg_ctx;
     int ret;
     char *out = NULL;
-    size_t len, curlen = 0;
+    unsigned int len, curlen = 0;
     const char prefix[] = "GSSAPI Error: ";
     
     len = sizeof(prefix);
@@ -599,11 +611,12 @@ static void gssapi_common_mech_free(void *global_context __attribute__((unused))
 /*****************************  Server Section  *****************************/
 
 static int 
-gssapi_server_mech_new(void *glob_context __attribute__((unused)), 
-		       sasl_server_params_t *params,
-		       const char *challenge __attribute__((unused)), 
-		       unsigned challen __attribute__((unused)),
-		       void **conn_context)
+_gssapi_server_mech_new(void *glob_context __attribute__((unused)), 
+		        sasl_server_params_t *params,
+		        const char *challenge __attribute__((unused)), 
+		        unsigned challen __attribute__((unused)),
+		        int rfc2222_gss,
+		        void **conn_context)
 {
     context_t *text;
     
@@ -619,10 +632,33 @@ gssapi_server_mech_new(void *glob_context __attribute__((unused)),
     text->server_creds = GSS_C_NO_CREDENTIAL;
     text->client_creds = GSS_C_NO_CREDENTIAL;
     text->state = SASL_GSSAPI_STATE_AUTHNEG;
+    text->rfc2222_gss = rfc2222_gss;
     
     *conn_context = text;
     
     return SASL_OK;
+}
+
+static int 
+gssapi_server_mech_new(void *glob_context,
+		       sasl_server_params_t *params,
+		       const char *challenge,
+		       unsigned challen,
+		       void **conn_context)
+{
+    return _gssapi_server_mech_new(glob_context, params, challenge,
+                                   challen, 1, conn_context);
+}
+
+static int 
+gss_spnego_server_mech_new(void *glob_context,
+		           sasl_server_params_t *params,
+		           const char *challenge,
+		           unsigned challen,
+		           void **conn_context)
+{
+    return _gssapi_server_mech_new(glob_context, params, challenge,
+                                   challen, 0, conn_context);
 }
 
 static int 
@@ -640,7 +676,9 @@ gssapi_server_mech_step(void *conn_context,
     OM_uint32 maj_stat = 0, min_stat = 0;
     OM_uint32 max_input;
     gss_buffer_desc name_token;
-    int ret, out_flags = 0 ;
+    int ret;
+    OM_uint32 out_flags = 0 ;
+    int layerchoice = 0;
     
     input_token = &real_input_token;
     output_token = &real_output_token;
@@ -778,11 +816,15 @@ gssapi_server_mech_step(void *conn_context,
 	}
 	
 	if (maj_stat == GSS_S_COMPLETE) {
-	    /* Switch to ssf negotiation */
-	    text->state = SASL_GSSAPI_STATE_SSFCAP;
-	}
-	
-	return SASL_CONTINUE;
+            if (text->rfc2222_gss) {
+	        /* Switch to ssf negotiation */
+	        text->state = SASL_GSSAPI_STATE_SSFCAP;
+                return SASL_CONTINUE;
+            }
+	} else {
+	    return SASL_CONTINUE;
+        }
+        /* Fall-through for non-RFC 2222 mechanisms such as GSS-SPNEGO */
 
     case SASL_GSSAPI_STATE_SSFCAP: {
 	unsigned char sasldata[4];
@@ -920,7 +962,7 @@ gssapi_server_mech_step(void *conn_context,
 	if (name_without_realm.value) {
 	    params->utils->free(name_without_realm.value);
 	}	
-	
+
 	/* we have to decide what sort of encryption/integrity/etc.,
 	   we support */
 	if (params->props.max_ssf < params->external_ssf) {
@@ -933,7 +975,20 @@ gssapi_server_mech_step(void *conn_context,
 	} else {
 	    text->requiressf = params->props.min_ssf - params->external_ssf;
 	}
-	
+
+        if (!text->rfc2222_gss) {
+            if (out_flags & GSS_C_CONF_FLAG)
+                layerchoice = 4;
+            else if (out_flags & GSS_C_INTEG_FLAG)
+                layerchoice = 2;
+            else
+                layerchoice = 1;
+
+            text->limitssf = 128; /* XXX */
+
+            goto select_layers;
+        }
+
 	/* build up our security properties token */
         if (params->props.maxbufsize > 0xFFFFFF) {
             /* make sure maxbufsize isn't too large */
@@ -1016,8 +1071,6 @@ gssapi_server_mech_step(void *conn_context,
     }
 
     case SASL_GSSAPI_STATE_SSFREQ: {
-	int layerchoice;
-	
 	real_input_token.value = (void *)clientin;
 	real_input_token.length = clientinlen;
 	
@@ -1037,6 +1090,8 @@ gssapi_server_mech_step(void *conn_context,
 	}
 	
 	layerchoice = (int)(((char *)(output_token->value))[0]);
+select_layers:
+
 	if (layerchoice == 1 && text->requiressf == 0) { /* no encryption */
 	    oparams->encode = NULL;
 	    oparams->decode = NULL;
@@ -1066,8 +1121,22 @@ gssapi_server_mech_step(void *conn_context,
 	    sasl_gss_free_context_contents(text);
 	    return SASL_FAIL;
 	}
-	
-	if (output_token->length > 4) {
+
+        if (output_token->length == 4 || !text->rfc2222_gss) {
+	    /* null authzid */
+	    int ret;
+	    
+	    ret = params->canon_user(params->utils->conn,
+				     text->authid,
+				     0, /* strlen(text->authid) */
+				     SASL_CU_AUTHZID | SASL_CU_AUTHID,
+				     oparams);
+	    
+	    if (ret != SASL_OK) {
+		sasl_gss_free_context_contents(text);
+		return ret;
+	    }	    
+	} else if (output_token->length > 4) {
 	    int ret;
 	    
 	    ret = params->canon_user(params->utils->conn,
@@ -1088,20 +1157,6 @@ gssapi_server_mech_step(void *conn_context,
 		sasl_gss_free_context_contents(text);
 		return ret;
 	    }
-	} else if(output_token->length == 4) {
-	    /* null authzid */
-	    int ret;
-	    
-	    ret = params->canon_user(params->utils->conn,
-				     text->authid,
-				     0, /* strlen(text->authid) */
-				     SASL_CU_AUTHZID | SASL_CU_AUTHID,
-				     oparams);
-	    
-	    if (ret != SASL_OK) {
-		sasl_gss_free_context_contents(text);
-		return ret;
-	    }	    
 	} else {
 	    SETERROR(text->utils,
 		     "token too short");
@@ -1121,10 +1176,17 @@ gssapi_server_mech_step(void *conn_context,
 	    oparams->client_creds = NULL;
 	}
 
-        oparams->maxoutbuf =
-	    (((unsigned char *) output_token->value)[1] << 16) |
-            (((unsigned char *) output_token->value)[2] << 8) |
-            (((unsigned char *) output_token->value)[3] << 0);
+	oparams->gss_peer_name = text->client_name;
+	oparams->gss_local_name = text->server_name;
+
+        if (text->rfc2222_gss) {
+            oparams->maxoutbuf =
+	        (((unsigned char *) output_token->value)[1] << 16) |
+                (((unsigned char *) output_token->value)[2] << 8) |
+                (((unsigned char *) output_token->value)[3] << 0);
+        } else {
+            oparams->maxoutbuf = 0xFFFFFF;
+        }
 
 	if (oparams->mech_ssf) {
  	    maj_stat = gss_wrap_size_limit( &min_stat,
@@ -1142,7 +1204,7 @@ gssapi_server_mech_step(void *conn_context,
 		oparams->maxoutbuf = max_input;
 	    }    
 	}
-	
+
 	GSS_LOCK_MUTEX(params->utils);
 	gss_release_buffer(&min_stat, output_token);
 	GSS_UNLOCK_MUTEX(params->utils);
@@ -1178,6 +1240,46 @@ static sasl_server_plug_t gssapi_server_plugins[] =
 	| SASL_SEC_NOANONYMOUS
 	| SASL_SEC_MUTUAL_AUTH		/* security_flags */
 	| SASL_SEC_PASS_CREDENTIALS,
+	SASL_FEAT_WANT_CLIENT_FIRST
+	| SASL_FEAT_ALLOWS_PROXY,	/* features */
+	NULL,				/* glob_context */
+	&gssapi_server_mech_new,	/* mech_new */
+	&gssapi_server_mech_step,	/* mech_step */
+	&gssapi_common_mech_dispose,	/* mech_dispose */
+	&gssapi_common_mech_free,	/* mech_free */
+	NULL,				/* setpass */
+	NULL,				/* user_query */
+	NULL,				/* idle */
+	NULL,				/* mech_avail */
+	NULL				/* spare */
+    },
+    {
+	"GSS-SPNEGO",			/* mech_name */
+	K5_MAX_SSF,			/* max_ssf */
+	SASL_SEC_NOPLAINTEXT
+	| SASL_SEC_NOACTIVE
+	| SASL_SEC_NOANONYMOUS
+	| SASL_SEC_MUTUAL_AUTH		/* security_flags */
+	| SASL_SEC_PASS_CREDENTIALS,
+	SASL_FEAT_WANT_CLIENT_FIRST
+	| SASL_FEAT_ALLOWS_PROXY,	/* features */
+	NULL,				/* glob_context */
+	&gss_spnego_server_mech_new,	/* mech_new */
+	&gssapi_server_mech_step,	/* mech_step */
+	&gssapi_common_mech_dispose,	/* mech_dispose */
+	&gssapi_common_mech_free,	/* mech_free */
+	NULL,				/* setpass */
+	NULL,				/* user_query */
+	NULL,				/* idle */
+	NULL,				/* mech_avail */
+	NULL				/* spare */
+    },
+    {
+	"GSS-EAP",			/* mech_name */
+	256,			        /* max_ssf */
+	SASL_SEC_NOPLAINTEXT
+	| SASL_SEC_NOACTIVE
+	| SASL_SEC_MUTUAL_AUTH,		/* security_flags */
 	SASL_FEAT_WANT_CLIENT_FIRST
 	| SASL_FEAT_ALLOWS_PROXY,	/* features */
 	NULL,				/* glob_context */
@@ -1243,7 +1345,7 @@ int gssapiv2_server_plug_init(
     
     *out_version = SASL_SERVER_PLUG_VERSION;
     *pluglist = gssapi_server_plugins;
-    *plugcount = 1;  
+    *plugcount = sizeof(gssapi_server_plugins)/sizeof(gssapi_server_plugins[0]);
 
 #ifdef GSS_USE_MUTEXES
     if (!gss_mutex) {
@@ -1259,9 +1361,11 @@ int gssapiv2_server_plug_init(
 
 /*****************************  Client Section  *****************************/
 
-static int gssapi_client_mech_new(void *glob_context __attribute__((unused)), 
-				  sasl_client_params_t *params,
-				  void **conn_context)
+static int _gssapi_client_mech_new(void *glob_context __attribute__((unused)), 
+				   sasl_client_params_t *params,
+				   gss_OID mech,
+				   int rfc2222_gss,
+				   void **conn_context)
 {
     context_t *text;
     
@@ -1277,10 +1381,36 @@ static int gssapi_client_mech_new(void *glob_context __attribute__((unused)),
     text->client_name = GSS_C_NO_NAME;
     text->server_creds = GSS_C_NO_CREDENTIAL;
     text->client_creds  = GSS_C_NO_CREDENTIAL;
+    text->mech = mech;
+    text->rfc2222_gss = rfc2222_gss;
 
     *conn_context = text;
     
     return SASL_OK;
+}
+
+static int gssapi_client_mech_new(void *glob_context,
+				       sasl_client_params_t *params,
+				       void **conn_context)
+{
+    return _gssapi_client_mech_new(glob_context, params, &gss_krb5_mechanism_oid_desc,
+                                   1, conn_context);
+}
+
+static int gss_spnego_client_mech_new(void *glob_context,
+				      sasl_client_params_t *params,
+				      void **conn_context)
+{
+    return _gssapi_client_mech_new(glob_context, params, &gss_spnego_mechanism_oid_desc,
+                                   0, conn_context);
+}
+
+static int gss_eap_client_mech_new(void *glob_context,
+				   sasl_client_params_t *params,
+				   void **conn_context)
+{
+    return _gssapi_client_mech_new(glob_context, params, &gss_eap_mechanism_oid_desc,
+                                   1, conn_context);
 }
 
 static int gssapi_client_mech_step(void *conn_context,
@@ -1296,16 +1426,18 @@ static int gssapi_client_mech_step(void *conn_context,
     gss_buffer_t input_token, output_token;
     gss_buffer_desc real_input_token, real_output_token;
     OM_uint32 maj_stat = 0, min_stat = 0;
-    OM_uint32 max_input;
+    OM_uint32 max_input, out_flags;
     gss_buffer_desc name_token;
-    int ret;
+    int ret, serverhas = 0;
     OM_uint32 req_flags = 0, out_req_flags = 0;
+    sasl_security_properties_t *secprops = &(params->props);
+
     input_token = &real_input_token;
     output_token = &real_output_token;
     output_token->value = NULL;
     input_token->value = NULL; 
     input_token->length = 0;
-    
+ 
     *clientout = NULL;
     *clientoutlen = 0;
     
@@ -1315,6 +1447,7 @@ static int gssapi_client_mech_step(void *conn_context,
 	/* try to get the userid */
 	if (text->user == NULL) {
 	    int user_result = SASL_OK;
+	    int pass_result = SASL_OK;
 	    
 	    user_result = _plug_get_userid(params->utils, &text->user,
 					   prompt_need);
@@ -1329,22 +1462,63 @@ static int gssapi_client_mech_step(void *conn_context,
 		params->utils->free(*prompt_need);
 		*prompt_need = NULL;
 	    }
-		    
+
+            if (params->gss_creds == GSS_C_NO_CREDENTIAL) {
+		unsigned int free_password = 0;
+		sasl_secret_t *password = NULL;
+
+		pass_result = _plug_get_password(params->utils, &password,
+					         &free_password, prompt_need);
+		if (pass_result == SASL_OK) {
+		    gss_buffer_desc pwBuf;
+		    gss_buffer_desc nameBuf;
+		    gss_OID_set_desc mechs;
+
+		    nameBuf.length = strlen(text->user);
+		    nameBuf.value = (void *)text->user;
+		    pwBuf.length = password->len;
+		    pwBuf.value = password->data;
+		    mechs.count = 1;
+		    mechs.elements = text->mech;
+
+		    GSS_LOCK_MUTEX(params->utils);
+		    maj_stat = gss_import_name(&min_stat, &nameBuf,
+					       GSS_C_NT_USER_NAME, &text->client_name);
+		    if (maj_stat == GSS_S_COMPLETE) {
+			maj_stat = gss_acquire_cred_with_password(&min_stat,
+								  text->client_name,
+								  &pwBuf, GSS_C_INDEFINITE,
+								  &mechs, GSS_C_INITIATE,
+								  &text->client_creds,
+                                                                  NULL, NULL);
+			if (GSS_ERROR(maj_stat)) {
+			    if (free_password) _plug_free_secret(params->utils, &password);
+			    sasl_gss_seterror(text->utils, maj_stat, min_stat);
+			    GSS_UNLOCK_MUTEX(params->utils);
+			    sasl_gss_free_context_contents(text);
+			    return SASL_FAIL;
+			}
+		    }
+		    GSS_UNLOCK_MUTEX(params->utils);
+		    if (free_password) _plug_free_secret(params->utils, &password);
+		}
+	    }
 	    /* if there are prompts not filled in */
-	    if (user_result == SASL_INTERACT) {
-		/* make the prompt list */
+	    if (user_result == SASL_INTERACT && text->mech != &gss_krb5_mechanism_oid_desc) {
 		int result =
-		    _plug_make_prompts(params->utils, prompt_need,
-				       user_result == SASL_INTERACT ?
-				       "Please enter your authorization name" : NULL, NULL,
-				       NULL, NULL,
-				       NULL, NULL,
-				       NULL, NULL, NULL,
-				       NULL, NULL, NULL);
+		_plug_make_prompts(params->utils, prompt_need,
+				   user_result == SASL_INTERACT ?
+				   "Please enter your authorization name" : NULL,
+				   NULL,
+				   NULL, NULL,
+				   pass_result == SASL_INTERACT ?
+				   "Please enter your password" : NULL, NULL,
+				   NULL, NULL, NULL,
+				   NULL, NULL, NULL);
 		if (result != SASL_OK) return result;
-		
 		return SASL_INTERACT;
 	    }
+
 	}
 	    
 	if (text->server_name == GSS_C_NO_NAME) { /* only once */
@@ -1416,10 +1590,11 @@ static int gssapi_client_mech_step(void *conn_context,
 
 	GSS_LOCK_MUTEX(params->utils);
 	maj_stat = gss_init_sec_context(&min_stat,
-					GSS_C_NO_CREDENTIAL,
+                                        params->gss_creds ? params->gss_creds :
+                                            text->client_creds,
 					&text->gss_ctx,
 					text->server_name,
-					GSS_C_NO_OID,
+					text->mech,
 					req_flags,
 					0,
 					GSS_C_NO_CHANNEL_BINDINGS,
@@ -1469,6 +1644,8 @@ static int gssapi_client_mech_step(void *conn_context,
 	
 	if (maj_stat == GSS_S_COMPLETE) {
 	    GSS_LOCK_MUTEX(params->utils);
+	    if (text->client_name != GSS_C_NO_NAME)
+		gss_release_name(&min_stat, &text->client_name);
 	    maj_stat = gss_inquire_context(&min_stat,
 					   text->gss_ctx,
 					   &text->client_name,
@@ -1476,7 +1653,7 @@ static int gssapi_client_mech_step(void *conn_context,
 					   NULL,       /* lifetime */
 					   NULL,       /* mech */
 					   /* FIX ME: Should check the resulting flags here */
-					   NULL,       /* flags */
+					   &out_flags,       /* flags */
 					   NULL,       /* local init */
 					   NULL);      /* open */
 	    GSS_UNLOCK_MUTEX(params->utils);
@@ -1524,19 +1701,31 @@ static int gssapi_client_mech_step(void *conn_context,
 	    gss_release_buffer(&min_stat, &name_token);
 	    GSS_UNLOCK_MUTEX(params->utils);
 	    
+	    oparams->gss_peer_name = text->server_name;
+	    oparams->gss_local_name = text->client_name;
+
 	    if (ret != SASL_OK) return ret;
-	    
-	    /* Switch to ssf negotiation */
-	    text->state = SASL_GSSAPI_STATE_SSFCAP;
-	}
 	
-	return SASL_CONTINUE;
+            if (text->rfc2222_gss) {
+	        /* Switch to ssf negotiation */
+	        text->state = SASL_GSSAPI_STATE_SSFCAP;
+                return SASL_CONTINUE;
+            } else {
+                serverhas = 1;
+                if (out_flags & GSS_C_INTEG_FLAG)
+                    serverhas |= 2;
+                if (out_flags & GSS_C_CONF_FLAG)
+                    serverhas |= 4;
+                goto select_layers;
+            }
+	} else {
+	    return SASL_CONTINUE;
+        }
 
     case SASL_GSSAPI_STATE_SSFCAP: {
-	sasl_security_properties_t *secprops = &(params->props);
 	unsigned int alen, external = params->external_ssf;
 	sasl_ssf_t need, allowed;
-	char serverhas, mychoice;
+	char mychoice;
 	
 	real_input_token.value = (void *) serverin;
 	real_input_token.length = serverinlen;
@@ -1560,7 +1749,11 @@ static int gssapi_client_mech_step(void *conn_context,
 	    }
 	    return SASL_FAIL;
 	}
+
+	/* bit mask of server support */
+	serverhas = ((char *)output_token->value)[0];
 	
+select_layers:
 	/* taken from kerberos.c */
 	if (secprops->min_ssf > (K5_MAX_SSF + external)) {
 	    return SASL_TOOWEAK;
@@ -1580,9 +1773,6 @@ static int gssapi_client_mech_step(void *conn_context,
 	    /* good to go */
 	    need = 0;
 	}
-	
-	/* bit mask of server support */
-	serverhas = ((char *)output_token->value)[0];
 	
 	/* if client didn't set use strongest layer available */
 	if (allowed >= K5_MAX_SSF && need <= K5_MAX_SSF && (serverhas & 4)) {
@@ -1609,11 +1799,15 @@ static int gssapi_client_mech_step(void *conn_context,
 	    sasl_gss_free_context_contents(text);
 	    return SASL_TOOWEAK;
 	}
-	
-        oparams->maxoutbuf =
-	    (((unsigned char *) output_token->value)[1] << 16) |
-            (((unsigned char *) output_token->value)[2] << 8) |
-            (((unsigned char *) output_token->value)[3] << 0);
+
+        if (text->rfc2222_gss) {
+            oparams->maxoutbuf =
+	        (((unsigned char *) output_token->value)[1] << 16) |
+                (((unsigned char *) output_token->value)[2] << 8) |
+                (((unsigned char *) output_token->value)[3] << 0);
+       } else {
+            oparams->maxoutbuf = 0xFFFFFF;
+        }
 
 	if(oparams->mech_ssf) {
             maj_stat = gss_wrap_size_limit( &min_stat,
@@ -1635,6 +1829,18 @@ static int gssapi_client_mech_step(void *conn_context,
 	GSS_LOCK_MUTEX(params->utils);
 	gss_release_buffer(&min_stat, output_token);
 	GSS_UNLOCK_MUTEX(params->utils);
+
+        if (!text->rfc2222_gss) {
+            text->state = SASL_GSSAPI_STATE_AUTHENTICATED;
+	
+            oparams->doneflag = 1;
+	
+            /* used by layers */
+            _plug_decode_init(&text->decode_context, text->utils,
+			      (params->props.maxbufsize > 0xFFFFFF) ? 0xFFFFFF :
+			      params->props.maxbufsize);
+            return SASL_OK;
+        }
 	
 	/* oparams->user is always set, due to canon_user requirements.
 	 * Make sure the client actually requested it though, by checking
@@ -1740,7 +1946,7 @@ static int gssapi_client_mech_step(void *conn_context,
     return SASL_FAIL; /* should never get here */
 }
 
-static const long gssapi_required_prompts[] = {
+static const unsigned long gssapi_required_prompts[] = {
     SASL_CB_LIST_END
 };  
 
@@ -1766,7 +1972,49 @@ static sasl_client_plug_t gssapi_client_plugins[] =
 	NULL,				/* idle */
 	NULL,				/* spare */
 	NULL				/* spare */
-    }
+    },
+    {
+	"GSS-SPNEGO",			/* mech_name */
+	K5_MAX_SSF,			/* max_ssf */
+	SASL_SEC_NOPLAINTEXT
+	| SASL_SEC_NOACTIVE
+	| SASL_SEC_NOANONYMOUS
+	| SASL_SEC_MUTUAL_AUTH 
+	| SASL_SEC_PASS_CREDENTIALS,    /* security_flags */
+	SASL_FEAT_NEEDSERVERFQDN
+	| SASL_FEAT_WANT_CLIENT_FIRST
+	| SASL_FEAT_ALLOWS_PROXY,	/* features */
+	gssapi_required_prompts,	/* required_prompts */
+	NULL,				/* glob_context */
+	&gss_spnego_client_mech_new,	/* mech_new */
+	&gssapi_client_mech_step,	/* mech_step */
+	&gssapi_common_mech_dispose,	/* mech_dispose */
+	&gssapi_common_mech_free,	/* mech_free */
+	NULL,				/* idle */
+	NULL,				/* spare */
+	NULL				/* spare */
+    },
+    {
+	"GSS-EAP",			/* mech_name */
+	128,			        /* max_ssf */
+	SASL_SEC_NOPLAINTEXT
+	| SASL_SEC_NOACTIVE
+	| SASL_SEC_NOANONYMOUS
+	| SASL_SEC_MUTUAL_AUTH 
+	| SASL_SEC_PASS_CREDENTIALS,    /* security_flags */
+	SASL_FEAT_NEEDSERVERFQDN
+	| SASL_FEAT_WANT_CLIENT_FIRST
+	| SASL_FEAT_ALLOWS_PROXY,	/* features */
+	gssapi_required_prompts,	/* required_prompts */
+	NULL,				/* glob_context */
+	&gss_eap_client_mech_new,	/* mech_new */
+	&gssapi_client_mech_step,	/* mech_step */
+	&gssapi_common_mech_dispose,	/* mech_dispose */
+	&gssapi_common_mech_free,	/* mech_free */
+	NULL,				/* idle */
+	NULL,				/* spare */
+	NULL				/* spare */
+    },
 };
 
 int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)), 
@@ -1782,7 +2030,7 @@ int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)),
     
     *out_version = SASL_CLIENT_PLUG_VERSION;
     *pluglist = gssapi_client_plugins;
-    *plugcount = 1;
+    *plugcount = sizeof(gssapi_client_plugins)/sizeof(gssapi_client_plugins[0]);
 
 #ifdef GSS_USE_MUTEXES
     if(!gss_mutex) {
@@ -1795,4 +2043,3 @@ int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)),
     
     return SASL_OK;
 }
-

@@ -161,7 +161,7 @@ libsql_la_LIBADD = $(COMPAT_OBJS)
 
 # Instructions for making the _init files
 
-init_src=anonymous_init.c crammd5_init.c digestmd5_init.c gssapiv2_init.c \
+init_src=anonymous_init.c crammd5_init.c digestmd5_init.c gs2_init.c gssapiv2_init.c \
 kerberos4_init.c login_init.c plain_init.c srp_init.c otp_init.c ntlm_init.c \
 passdss_init.c sasldb_init.c sql_init.c ldapdb_init.c
 

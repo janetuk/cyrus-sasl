@@ -77,8 +77,7 @@ subdir = java/javax/security/auth/callback
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/kerberos_v4.m4 \
-	$(top_srcdir)/config/libtool.m4 $(top_srcdir)/config/plain.m4 \
-	$(top_srcdir)/config/sasldb.m4 \
+	$(top_srcdir)/config/plain.m4 $(top_srcdir)/config/sasldb.m4 \
 	$(top_srcdir)/cmulocal/berkdb.m4 \
 	$(top_srcdir)/cmulocal/bsd_sockets.m4 \
 	$(top_srcdir)/cmulocal/c-attribute.m4 \
@@ -86,6 +85,11 @@ am__aclocal_m4_deps = $(top_srcdir)/config/kerberos_v4.m4 \
 	$(top_srcdir)/cmulocal/cyrus.m4 \
 	$(top_srcdir)/cmulocal/init_automake.m4 \
 	$(top_srcdir)/cmulocal/ipv6.m4 \
+	$(top_srcdir)/cmulocal/libtool.m4 \
+	$(top_srcdir)/cmulocal/ltoptions.m4 \
+	$(top_srcdir)/cmulocal/ltsugar.m4 \
+	$(top_srcdir)/cmulocal/ltversion.m4 \
+	$(top_srcdir)/cmulocal/lt~obsolete.m4 \
 	$(top_srcdir)/cmulocal/openldap.m4 \
 	$(top_srcdir)/cmulocal/openssl.m4 \
 	$(top_srcdir)/cmulocal/sasl2.m4 $(top_srcdir)/configure.in
@@ -101,6 +105,7 @@ am__installdirs = "$(DESTDIR)$(javasasldir)"
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -116,11 +121,14 @@ DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DIRS = @DIRS@
 DMALLOC_LIBS = @DMALLOC_LIBS@
+DSYMUTIL = @DSYMUTIL@
+DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+FGREP = @FGREP@
 GETADDRINFOOBJS = @GETADDRINFOOBJS@
 GETNAMEINFOOBJS = @GETNAMEINFOOBJS@
 GETSUBOPT = @GETSUBOPT@
@@ -138,6 +146,7 @@ JAVADOC = @JAVADOC@
 JAVAH = @JAVAH@
 JAVAROOT = @JAVAROOT@
 JAVA_INCLUDES = @JAVA_INCLUDES@
+LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -150,6 +159,7 @@ LIB_MYSQL = @LIB_MYSQL@
 LIB_PGSQL = @LIB_PGSQL@
 LIB_SOCKET = @LIB_SOCKET@
 LIB_SQLITE = @LIB_SQLITE@
+LIPO = @LIPO@
 LN_S = @LN_S@
 LTGETADDRINFOOBJS = @LTGETADDRINFOOBJS@
 LTGETNAMEINFOOBJS = @LTGETNAMEINFOOBJS@
@@ -158,8 +168,12 @@ LTSNPRINTFOBJS = @LTSNPRINTFOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
+NMEDIT = @NMEDIT@
 NTLM_LIBS = @NTLM_LIBS@
+OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OTOOL = @OTOOL@
+OTOOL64 = @OTOOL64@
 OTP_LIBS = @OTP_LIBS@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -188,6 +202,7 @@ SASL_STATIC_OBJS = @SASL_STATIC_OBJS@
 SASL_STATIC_SRCS = @SASL_STATIC_SRCS@
 SASL_UTIL_HEADERS_EXTRA = @SASL_UTIL_HEADERS_EXTRA@
 SASL_UTIL_LIBS_EXTRA = @SASL_UTIL_LIBS_EXTRA@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SFIO_INC_FLAGS = @SFIO_INC_FLAGS@
 SFIO_LIB_FLAGS = @SFIO_LIB_FLAGS@
@@ -202,6 +217,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@

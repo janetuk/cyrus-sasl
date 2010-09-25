@@ -81,8 +81,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	getaddrinfo.c getnameinfo.c getsubopt.c snprintf.c
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/kerberos_v4.m4 \
-	$(top_srcdir)/config/libtool.m4 $(top_srcdir)/config/plain.m4 \
-	$(top_srcdir)/config/sasldb.m4 \
+	$(top_srcdir)/config/plain.m4 $(top_srcdir)/config/sasldb.m4 \
 	$(top_srcdir)/cmulocal/berkdb.m4 \
 	$(top_srcdir)/cmulocal/bsd_sockets.m4 \
 	$(top_srcdir)/cmulocal/c-attribute.m4 \
@@ -90,6 +89,11 @@ am__aclocal_m4_deps = $(top_srcdir)/config/kerberos_v4.m4 \
 	$(top_srcdir)/cmulocal/cyrus.m4 \
 	$(top_srcdir)/cmulocal/init_automake.m4 \
 	$(top_srcdir)/cmulocal/ipv6.m4 \
+	$(top_srcdir)/cmulocal/libtool.m4 \
+	$(top_srcdir)/cmulocal/ltoptions.m4 \
+	$(top_srcdir)/cmulocal/ltsugar.m4 \
+	$(top_srcdir)/cmulocal/ltversion.m4 \
+	$(top_srcdir)/cmulocal/lt~obsolete.m4 \
 	$(top_srcdir)/cmulocal/openldap.m4 \
 	$(top_srcdir)/cmulocal/openssl.m4 \
 	$(top_srcdir)/cmulocal/sasl2.m4 $(top_srcdir)/configure.in
@@ -99,7 +103,6 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
-AR = ar
 ARFLAGS = cru
 libsasl2_a_AR = $(AR) $(ARFLAGS)
 libsasl2_a_LIBADD =
@@ -121,20 +124,21 @@ am__objects_1 = auxprop.lo canonusr.lo checkpw.lo client.lo common.lo \
 am__objects_2 =
 am_libsasl2_la_OBJECTS = $(am__objects_1) $(am__objects_2)
 libsasl2_la_OBJECTS = $(am_libsasl2_la_OBJECTS)
-libsasl2_la_LINK = $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+libsasl2_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libsasl2_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
-	$(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 SOURCES = $(libsasl2_a_SOURCES) $(libsasl2_la_SOURCES)
 DIST_SOURCES = $(libsasl2_a_SOURCES) $(libsasl2_la_SOURCES)
 ETAGS = etags
@@ -142,6 +146,7 @@ CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -157,11 +162,14 @@ DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DIRS = @DIRS@
 DMALLOC_LIBS = @DMALLOC_LIBS@
+DSYMUTIL = @DSYMUTIL@
+DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+FGREP = @FGREP@
 GETADDRINFOOBJS = @GETADDRINFOOBJS@
 GETNAMEINFOOBJS = @GETNAMEINFOOBJS@
 GETSUBOPT = @GETSUBOPT@
@@ -179,6 +187,7 @@ JAVADOC = @JAVADOC@
 JAVAH = @JAVAH@
 JAVAROOT = @JAVAROOT@
 JAVA_INCLUDES = @JAVA_INCLUDES@
+LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -191,6 +200,7 @@ LIB_MYSQL = @LIB_MYSQL@
 LIB_PGSQL = @LIB_PGSQL@
 LIB_SOCKET = @LIB_SOCKET@
 LIB_SQLITE = @LIB_SQLITE@
+LIPO = @LIPO@
 LN_S = @LN_S@
 LTGETADDRINFOOBJS = @LTGETADDRINFOOBJS@
 LTGETNAMEINFOOBJS = @LTGETNAMEINFOOBJS@
@@ -199,8 +209,12 @@ LTSNPRINTFOBJS = @LTSNPRINTFOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
+NMEDIT = @NMEDIT@
 NTLM_LIBS = @NTLM_LIBS@
+OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OTOOL = @OTOOL@
+OTOOL64 = @OTOOL64@
 OTP_LIBS = @OTP_LIBS@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -229,6 +243,7 @@ SASL_STATIC_OBJS = @SASL_STATIC_OBJS@
 SASL_STATIC_SRCS = @SASL_STATIC_SRCS@
 SASL_UTIL_HEADERS_EXTRA = @SASL_UTIL_HEADERS_EXTRA@
 SASL_UTIL_LIBS_EXTRA = @SASL_UTIL_LIBS_EXTRA@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SFIO_INC_FLAGS = @SFIO_INC_FLAGS@
 SFIO_LIB_FLAGS = @SFIO_LIB_FLAGS@
@@ -243,6 +258,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -422,11 +438,11 @@ distclean-compile:
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
 plugin_common.lo: ../plugins/plugin_common.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT plugin_common.lo -MD -MP -MF $(DEPDIR)/plugin_common.Tpo -c -o plugin_common.lo `test -f '../plugins/plugin_common.c' || echo '$(srcdir)/'`../plugins/plugin_common.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT plugin_common.lo -MD -MP -MF $(DEPDIR)/plugin_common.Tpo -c -o plugin_common.lo `test -f '../plugins/plugin_common.c' || echo '$(srcdir)/'`../plugins/plugin_common.c
 @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/plugin_common.Tpo $(DEPDIR)/plugin_common.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../plugins/plugin_common.c' object='plugin_common.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o plugin_common.lo `test -f '../plugins/plugin_common.c' || echo '$(srcdir)/'`../plugins/plugin_common.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o plugin_common.lo `test -f '../plugins/plugin_common.c' || echo '$(srcdir)/'`../plugins/plugin_common.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

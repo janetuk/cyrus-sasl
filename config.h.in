@@ -308,6 +308,10 @@
 /* Ignore IP Address in Kerberos 4 tickets? */
 #undef KRB4_IGNORE_IP_ADDRESS
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Name of package */
 #undef PACKAGE
 

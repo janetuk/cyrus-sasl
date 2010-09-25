@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <gssapi/gssapi.h>
+#include "gs2_token.h"
 
 /*
  * $Id: util_token.c 23457 2009-12-08 00:04:48Z tlyu $
@@ -31,10 +32,6 @@
    never be longer than 127 bytes.  This assumption is not inherent in
    the interfaces, so the code can be fixed if the OSI namespace
    balloons unexpectedly. */
-
-#define g_OID_equal(o1, o2)                                             \
-        (((o1)->length == (o2)->length) &&                              \
-        (memcmp((o1)->elements, (o2)->elements, (o1)->length) == 0))
 
 /*
  * Each token looks like this:

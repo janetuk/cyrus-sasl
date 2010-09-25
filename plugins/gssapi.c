@@ -757,7 +757,7 @@ gssapi_server_mech_step(void *conn_context,
 	maj_stat =
 	    gss_accept_sec_context(&min_stat,
 				   &(text->gss_ctx),
-				   text->server_creds,
+				   params->gss_creds ? params->gss_creds : text->server_creds,
 				   input_token,
 				   GSS_C_NO_CHANNEL_BINDINGS,
 				   &text->client_name,

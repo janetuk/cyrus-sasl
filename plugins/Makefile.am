@@ -49,6 +49,7 @@
 anonymous_version = 2:23:0
 digestmd5_version = 2:23:0
 kerberos4_version = 2:23:0
+gs2_version = 2:23:0
 gssapiv2_version = 2:23:0
 crammd5_version = 2:23:0
 passdss_version = 2:23:0
@@ -78,7 +79,7 @@ common_sources = plugin_common.c plugin_common.h
 sasldir = $(prefix)/lib/sasl2
 sasl_LTLIBRARIES = @SASL_MECHS@
 EXTRA_LTLIBRARIES = libplain.la libanonymous.la libkerberos4.la libcrammd5.la \
-	libgssapiv2.la libdigestmd5.la liblogin.la libsrp.la libotp.la \
+	libgs2.la libgssapiv2.la libdigestmd5.la liblogin.la libsrp.la libotp.la \
 	libntlm.la libpassdss.la libsasldb.la libsql.la libldapdb.la
 
 libplain_la_SOURCES = plain.c plain_init.c $(common_sources)
@@ -95,6 +96,11 @@ libkerberos4_la_SOURCES = kerberos4.c kerberos4_init.c $(common_sources)
 libkerberos4_la_LDFLAGS = -version-info $(kerberos4_version)
 libkerberos4_la_DEPENDENCIES = $(COMPAT_OBJS)
 libkerberos4_la_LIBADD = $(SASL_KRB_LIB) $(LIB_SOCKET) $(COMPAT_OBJS)
+
+libgs2_la_SOURCES = gs2.c gs2_init.c gs2_token.c $(common_sources)
+libgs2_la_LDFLAGS = -version-info $(gs2_version)
+libgs2_la_DEPENDENCIES = $(COMPAT_OBJS)
+libgs2_la_LIBADD = $(GSSAPIBASE_LIBS) $(GSSAPI_LIBS) $(LIB_SOCKET) $(COMPAT_OBJS)
 
 libgssapiv2_la_SOURCES = gssapi.c gssapiv2_init.c $(common_sources)
 libgssapiv2_la_LDFLAGS = -version-info $(gssapiv2_version)

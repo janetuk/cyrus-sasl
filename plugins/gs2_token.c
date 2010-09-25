@@ -135,7 +135,7 @@ size_t
 gs2_token_size(const gss_OID_desc *mech, size_t body_size)
 {
     /* set body_size to sequence contents size */
-    body_size += 4 + (size_t) mech->length;         /* NEED overflow check */
+    body_size += 2 + (size_t) mech->length;         /* NEED overflow check */
     return 1 + der_length_size(body_size) + body_size;
 }
 

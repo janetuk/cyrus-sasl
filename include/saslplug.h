@@ -255,8 +255,8 @@ typedef struct sasl_client_params {
 
     /* for additions which don't require a version upgrade; set to 0 */
     void *gss_creds;
-    void *spare_ptr2;
-    void *spare_ptr3;
+    void *chanbindingstype;
+    void *chanbindingsdata;
     void *spare_ptr4;
 
     /* Canonicalize a user name from on-wire to internal format
@@ -289,7 +289,7 @@ typedef struct sasl_client_params {
 
     int (*spare_fptr1)();
 
-    int spare_int1;
+    int chanbindingslen;
     int spare_int2;
     int spare_int3;
 
@@ -551,12 +551,12 @@ typedef struct sasl_server_params {
 
     /* for additions which don't require a version upgrade; set to 0 */
     void *gss_creds;
-    void *spare_ptr2;
-    void *spare_ptr3;
+    void *chanbindingstype;
+    void *chanbindingsdata;
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int spare_int1;
+    int chanbindingslen;
     int spare_int2;
     int spare_int3;
 

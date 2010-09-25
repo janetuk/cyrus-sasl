@@ -1208,6 +1208,20 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
     else
         ((sasl_client_conn_t *)conn)->cparams->gss_creds = (void *)value;
     break;
+  case SASL_CHANNEL_BINDINGS: {
+    struct sasl_channel_bindings *cb = (struct sasl_channel_bindings *)value;
+
+    if (conn->type == SASL_CONN_SERVER) {
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingstype = cb->type;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingsdata = cb->data;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingslen = cb->len;
+    } else {
+        ((sasl_client_conn_t *)conn)->cparams->chanbindingstype = cb->type;
+        ((sasl_client_conn_t *)conn)->cparams->chanbindingsdata = cb->data;
+        ((sasl_client_conn_t *)conn)->cparams->chanbindingslen = cb->len;
+    }
+    break;
+  }
   default:
       sasl_seterror(conn, 0, "Unknown parameter type");
       result = SASL_BADPARAM;

@@ -301,8 +301,7 @@ typedef unsigned sasl_ssf_t;
 #define SASL_SEC_PASS_CREDENTIALS 0x0020
 #define SASL_SEC_MUTUAL_AUTH      0x0040
 #define SASL_SEC_CHANNEL_BINDINGS 0x0080
-#define SASL_SEC_GSS_FRAMING      0x0100
-#define SASL_SEC_MAXIMUM          0x01FF
+#define SASL_SEC_MAXIMUM          0x00FF
 
 typedef struct sasl_security_properties 
 { 

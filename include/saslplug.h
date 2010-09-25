@@ -257,7 +257,7 @@ typedef struct sasl_client_params {
     void *gss_creds;
     void *chanbindingstype;
     void *chanbindingsdata;
-    void *spare_ptr4;
+    struct sasl_client_plug *plug;
 
     /* Canonicalize a user name from on-wire to internal format
      *  added rjs3 2001-05-23
@@ -329,6 +329,8 @@ typedef struct sasl_client_params {
 /* This plugin allows proxying */
 #define SASL_FEAT_ALLOWS_PROXY 0x0020
 
+/* Underlying mechanism uses GSS framing */
+#define SASL_FEAT_GSS_FRAMING       0x0040
 /* client plug-in features */
 #define SASL_FEAT_NEEDSERVERFQDN 0x0001
 
@@ -458,6 +460,8 @@ LIBSASL_API int sasl_client_plugin_info (const char *mech_list,
 /* log message formatting routine */
 typedef void sasl_logmsg_p(sasl_conn_t *conn, const char *fmt, ...);
 
+struct sasl_server_plug;
+
 /*
  * input parameters to server SASL plugin
  *
@@ -553,7 +557,7 @@ typedef struct sasl_server_params {
     void *gss_creds;
     void *chanbindingstype;
     void *chanbindingsdata;
-    void *spare_ptr4;
+    struct sasl_server_plug *plug;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
     int chanbindingslen;

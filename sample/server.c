@@ -441,6 +441,7 @@ int main(int argc, char *argv[])
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
 
         cb.type = "sasl-sample";
+        cb.critical = 1;
         cb.data = "this is a test of channel bindings";
         cb.len = strlen(cb.data);
 

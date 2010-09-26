@@ -390,6 +390,19 @@ static int have_prompts(sasl_conn_t *conn,
   return 1; /* we have all the prompts */
 }
 
+static inline int sasl_is_plus_mech(const char *mech)
+{
+    size_t len = strlen(mech);
+    const char *p;
+
+    if (len < 5)
+        return 0;
+
+    p = &mech[len - 5];
+
+    return (strcmp(p, "-PLUS") == 0);
+}
+
 /* select a mechanism for a connection
  *  mechlist      -- mechanisms server has available (punctuation ignored)
  *  secret        -- optional secret from previous session
@@ -514,6 +527,12 @@ int sasl_client_start(sasl_conn_t *conn,
 	    /* Can it meet our features? */
 	    if ((conn->flags & SASL_NEED_PROXY) &&
 		!(m->m.plug->features & SASL_FEAT_ALLOWS_PROXY)) {
+		break;
+	    }
+
+	    /* If client requires channel binding, prefer -PLUS mech */
+	    if (c_conn->cparams->chanbindingscrit &&
+		!sasl_is_plus_mech(name)) {
 		break;
 	    }
 	    

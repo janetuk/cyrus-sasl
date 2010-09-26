@@ -300,7 +300,6 @@ typedef unsigned sasl_ssf_t;
 #define SASL_SEC_NOANONYMOUS      0x0010
 #define SASL_SEC_PASS_CREDENTIALS 0x0020
 #define SASL_SEC_MUTUAL_AUTH      0x0040
-#define SASL_SEC_CHANNEL_BINDINGS 0x0080
 #define SASL_SEC_MAXIMUM          0x00FF
 
 typedef struct sasl_security_properties 
@@ -794,6 +793,7 @@ LIBSASL_API int sasl_getprop(sasl_conn_t *conn, int propnum,
 
 typedef struct sasl_channel_bindings {
     char *type;
+    int critical;
     unsigned long len;
     unsigned char *data;
 } sasl_channel_bindings;

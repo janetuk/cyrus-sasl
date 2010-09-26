@@ -289,8 +289,8 @@ typedef struct sasl_client_params {
 
     int (*spare_fptr1)();
 
+    int chanbindingscrit;
     int chanbindingslen;
-    int spare_int2;
     int spare_int3;
 
     /* flags field as passed to sasl_client_new */
@@ -331,6 +331,10 @@ typedef struct sasl_client_params {
 
 /* Underlying mechanism uses GSS framing */
 #define SASL_FEAT_GSS_FRAMING       0x0040
+
+/* Underlying mechanism supports channel binding */
+#define SASL_FEAT_CHANNEL_BINDINGS  0x0080
+
 /* client plug-in features */
 #define SASL_FEAT_NEEDSERVERFQDN 0x0001
 
@@ -558,8 +562,8 @@ typedef struct sasl_server_params {
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
+    int chanbindingscrit;
     int chanbindingslen;
-    int spare_int2;
     int spare_int3;
 
     /* flags field as passed to sasl_server_new */

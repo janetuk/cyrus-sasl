@@ -369,16 +369,6 @@ gs2_server_mech_step(void *conn_context,
                                          &input_token);
         if (ret != SASL_OK)
             goto cleanup;
-
-        if ((text->gs2_flags & GS2_CB_FLAG_MASK) == GS2_CB_FLAG_N) {
-            if (params->chanbindingcrit != 0)
-                ret = SASL_BADAUTH;
-        } else if ((text->gs2_flags & GS2_CB_FLAG_MASK) == GS2_CB_FLAG_Y) {
-            if (SASL_CB_PRESENT(params))
-                ret = SASL_BADAUTH;
-        }
-        if (ret != SASL_OK)
-            goto cleanup;
     } else {
         input_token.value = (void *)clientin;
         input_token.length = clientinlen;
@@ -488,6 +478,18 @@ gs2_server_mech_step(void *conn_context,
                              oparams);
     if (ret != SASL_OK)
         goto cleanup;
+
+    switch (text->gs2_flags & GS2_CB_FLAG_MASK) {
+    case GS2_CB_FLAG_N:
+        oparams->chanbindingflag = SASL_CB_FLAG_NONE;
+        break;
+    case GS2_CB_FLAG_P:
+        oparams->chanbindingflag = SASL_CB_FLAG_USED;
+        break;
+    case GS2_CB_FLAG_Y:
+        oparams->chanbindingflag == SASL_CB_FLAG_WANT;
+        break;
+    }
 
     if (text->client_creds != GSS_C_NO_CREDENTIAL)
         oparams->client_creds = &text->client_creds;

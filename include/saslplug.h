@@ -198,7 +198,7 @@ typedef struct sasl_out_params {
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int spare_int1;
+    int chanbindingflag;
     int spare_int2;
     int spare_int3;
     int spare_int4;
@@ -566,8 +566,8 @@ typedef struct sasl_server_params {
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int chanbindingcrit;
     int chanbindinglen;
+    int chanbindingcrit;
     int spare_int3;
 
     /* flags field as passed to sasl_server_new */

@@ -1453,7 +1453,18 @@ int sasl_server_step(sasl_conn_t *conn,
 	    conn->oparams.maxoutbuf = conn->props.maxbufsize;
 	}
 
-	if(conn->oparams.user == NULL || conn->oparams.authid == NULL) {
+        /* Validate channel bindings */
+        if (conn->oparams.chanbindingflag == SASL_CB_FLAG_NONE &&
+            s_conn->sparams->chanbindingcrit) {
+	    sasl_seterror(conn, 0,
+			  "server requires channel binding but client provided none");
+            ret = SASL_BADAUTH;
+        } else if (conn->oparams.chanbindingflag == SASL_CB_FLAG_WANT &&
+            SASL_CB_PRESENT(s_conn->sparams)) {
+            sasl_seterror(conn, 0,
+                          "client incorrectly determined server had no channel binding");
+            ret = SASL_BADAUTH;
+        } else if (conn->oparams.user == NULL || conn->oparams.authid == NULL) {
 	    sasl_seterror(conn, 0,
 			  "mech did not call canon_user for both authzid " \
 			  "and authid");

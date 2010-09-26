@@ -257,7 +257,7 @@ typedef struct sasl_client_params {
     void *gss_creds;
     void *chanbindingstype;
     void *chanbindingsdata;
-    struct sasl_client_plug *plug;
+    void *spare_ptr4;
 
     /* Canonicalize a user name from on-wire to internal format
      *  added rjs3 2001-05-23
@@ -557,7 +557,7 @@ typedef struct sasl_server_params {
     void *gss_creds;
     void *chanbindingstype;
     void *chanbindingsdata;
-    struct sasl_server_plug *plug;
+    void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
     int chanbindingslen;

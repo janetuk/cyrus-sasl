@@ -652,7 +652,6 @@ int sasl_client_step(sasl_conn_t *conn,
   if(clientoutlen) *clientoutlen = 0;
 
   /* do a step */
-  c_conn->cparams->plug = c_conn->mech->m.plug;
   result = c_conn->mech->m.plug->mech_step(conn->context,
 					 c_conn->cparams,
 					 serverin,
@@ -661,7 +660,6 @@ int sasl_client_step(sasl_conn_t *conn,
 					 clientout, clientoutlen,
 					 &conn->oparams);
 
-  c_conn->cparams->plug = NULL;
   if (result == SASL_OK) {
       /* So we're done on this end, but if both
        * 1. the mech does server-send-last

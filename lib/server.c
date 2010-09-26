@@ -1427,7 +1427,6 @@ int sasl_server_step(sasl_conn_t *conn,
     if(serverout) *serverout = NULL;
     if(serveroutlen) *serveroutlen = 0;
 
-    s_conn->sparams->plug = s_conn->mech->m.plug;
     ret = s_conn->mech->m.plug->mech_step(conn->context,
 					s_conn->sparams,
 					clientin,
@@ -1436,7 +1435,6 @@ int sasl_server_step(sasl_conn_t *conn,
 					serveroutlen,
 					&conn->oparams);
 
-    s_conn->sparams->plug = NULL;
     if (ret == SASL_OK) {
 	ret = do_authorization(s_conn);
     }

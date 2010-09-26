@@ -368,7 +368,7 @@ int main(int argc, char *argv[])
 	int nfds, fd = -1;
 	FILE *in, *out;
 	fd_set readfds;
-	sasl_channel_bindings cb;
+	sasl_channel_binding cb;
 
 	FD_ZERO(&readfds);
 	for (i = 1; i <= l[0]; i++)
@@ -442,10 +442,10 @@ int main(int argc, char *argv[])
 
         cb.type = "sasl-sample";
         cb.critical = 0;
-        cb.data = "this is a test of channel bindings";
+        cb.data = "this is a test of channel binding";
         cb.len = strlen(cb.data);
 
-        sasl_setprop(conn, SASL_CHANNEL_BINDINGS, &cb);
+        sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
 
 	/* set external properties here
 	   sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */

@@ -390,19 +390,6 @@ static int have_prompts(sasl_conn_t *conn,
   return 1; /* we have all the prompts */
 }
 
-static inline int sasl_is_plus_mech(const char *mech)
-{
-    size_t len = strlen(mech);
-    const char *p;
-
-    if (len < 5)
-        return 0;
-
-    p = &mech[len - 5];
-
-    return (strcmp(p, "-PLUS") == 0);
-}
-
 /* select a mechanism for a connection
  *  mechlist      -- mechanisms server has available (punctuation ignored)
  *  secret        -- optional secret from previous session
@@ -464,6 +451,8 @@ int sasl_client_start(sasl_conn_t *conn,
 	minssf = conn->props.min_ssf - conn->external.ssf;
     }
 
+    c_conn->cparams->chanbindingflag = SASL_CB_FLAG_NONE;
+
     /* parse mechlist */
     list_len = strlen(mechlist);
 
@@ -491,11 +480,10 @@ int sasl_client_start(sasl_conn_t *conn,
 
 	/* foreach in client list */
 	for (m = cmechlist->mech_list; m != NULL; m = m->next) {
-	    int myflags;
-	    
-	    /* Is this the mechanism the server is suggesting? */
-	    if (strcasecmp(m->m.plug->mech_name, name))
-		continue; /* no */
+	    int myflags, plus;
+
+            if (!_sasl_is_equal_mech(name, m->m.plug->mech_name, &plus))
+                continue;
 
 	    /* Do we have the prompts for it? */
 	    if (!have_prompts(conn, m->m.plug))
@@ -528,16 +516,6 @@ int sasl_client_start(sasl_conn_t *conn,
 	    if ((conn->flags & SASL_NEED_PROXY) &&
 		!(m->m.plug->features & SASL_FEAT_ALLOWS_PROXY)) {
 		break;
-	    }
-
-	    /* If client requires channel binding, prefer -PLUS mech */
-	    if (c_conn->cparams->chanbindingslen != 0) {
-		if (sasl_is_plus_mech(name))
-		    c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_USED;
-		else
-		    c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_WANT;
-	    } else {
-		c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_NONE;
 	    }
 
 #ifdef PREFER_MECH
@@ -577,6 +555,13 @@ int sasl_client_start(sasl_conn_t *conn,
 		 bestm->m.plug->security_flags)) {
 		break;
 	    }
+
+            if (SASL_CB_PRESENT(c_conn->cparams)) {
+                if (plus)
+                    c_conn->cparams->chanbindingflag = SASL_CB_FLAG_USED;
+                else
+                    c_conn->cparams->chanbindingflag = SASL_CB_FLAG_WANT;
+            }
 
 	    if (mech) {
 		*mech = m->m.plug->mech_name;
@@ -965,6 +950,16 @@ _sasl_print_mechanism (
 
 	if (m->plug->features & SASL_FEAT_NEEDSERVERFQDN) {
 	    printf ("%cNEED_SERVER_FQDN", delimiter);
+	    delimiter = '|';
+	}
+
+	if (m->plug->features & SASL_FEAT_GSS_FRAMING) {
+	    printf ("%cGSS_FRAMING", delimiter);
+	    delimiter = '|';
+	}
+
+	if (m->plug->features & SASL_FEAT_CHANNEL_BINDING) {
+	    printf ("%cCHANNEL_BINDING", delimiter);
 	    delimiter = '|';
 	}
     }

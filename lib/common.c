@@ -1208,20 +1208,18 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
     else
         ((sasl_client_conn_t *)conn)->cparams->gss_creds = (void *)value;
     break;
-  case SASL_CHANNEL_BINDINGS: {
-    struct sasl_channel_bindings *cb = (struct sasl_channel_bindings *)value;
+  case SASL_CHANNEL_BINDING: {
+    struct sasl_channel_binding *cb = (struct sasl_channel_binding *)value;
 
     if (conn->type == SASL_CONN_SERVER) {
-        int cb_flag;
-
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingstype = cb->type;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingscrit = cb->critical;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingsdata = cb->data;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingslen = cb->len;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingtype = cb->type;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingcrit = cb->critical;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindingdata = cb->data;
+        ((sasl_server_conn_t *)conn)->sparams->chanbindinglen = cb->len;
     } else {
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingstype = cb->type;
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingsdata = cb->data;
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingslen = cb->len;
+        ((sasl_client_conn_t *)conn)->cparams->chanbindingtype = cb->type;
+        ((sasl_client_conn_t *)conn)->cparams->chanbindingdata = cb->data;
+        ((sasl_client_conn_t *)conn)->cparams->chanbindinglen = cb->len;
     }
     break;
   }
@@ -2333,6 +2331,24 @@ int sasl_listmech(sasl_conn_t *conn,
     PARAMERROR(conn);
 }
 
+int _sasl_is_equal_mech(const char *req_mech,
+                        const char *plug_mech,
+                        int *plus)
+{
+    size_t len = strlen(req_mech);
+    size_t n;
+
+    if (len > 5 &&
+        strcasecmp(&req_mech[len - 5], "-PLUS") == 0) {
+        n = len - 5;
+        *plus = 1;
+    } else {
+        n = len;
+        *plus = 0;
+    }
+
+    return (strncasecmp(req_mech, plug_mech, n) == 0);
+}
 
 #ifndef WIN32
 static char *

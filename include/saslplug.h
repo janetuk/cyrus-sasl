@@ -255,8 +255,8 @@ typedef struct sasl_client_params {
 
     /* for additions which don't require a version upgrade; set to 0 */
     void *gss_creds;
-    void *chanbindingstype;
-    void *chanbindingsdata;
+    void *chanbindingtype;
+    void *chanbindingdata;
     void *spare_ptr4;
 
     /* Canonicalize a user name from on-wire to internal format
@@ -292,9 +292,9 @@ typedef struct sasl_client_params {
 #define SASL_CB_FLAG_NONE   0       /* client did not support CB */
 #define SASL_CB_FLAG_USED   1       /* client supports and used CB */
 #define SASL_CB_FLAG_WANT   2       /* client supports CB, thinks server does not */
-
-    int chanbindingsflag;
-    int chanbindingslen;
+    int chanbindingflag;
+#define SASL_CB_PRESENT(params) ((params)->chanbindingtype != NULL && (params)->chanbindinglen)
+    int chanbindinglen;
     int spare_int3;
 
     /* flags field as passed to sasl_client_new */
@@ -337,7 +337,7 @@ typedef struct sasl_client_params {
 #define SASL_FEAT_GSS_FRAMING       0x0040
 
 /* Underlying mechanism supports channel binding */
-#define SASL_FEAT_CHANNEL_BINDINGS  0x0080
+#define SASL_FEAT_CHANNEL_BINDING  0x0080
 
 /* client plug-in features */
 #define SASL_FEAT_NEEDSERVERFQDN 0x0001
@@ -561,13 +561,13 @@ typedef struct sasl_server_params {
 
     /* for additions which don't require a version upgrade; set to 0 */
     void *gss_creds;
-    void *chanbindingstype;
-    void *chanbindingsdata;
+    void *chanbindingtype;
+    void *chanbindingdata;
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int chanbindingscrit;
-    int chanbindingslen;
+    int chanbindingcrit;
+    int chanbindinglen;
     int spare_int3;
 
     /* flags field as passed to sasl_server_new */

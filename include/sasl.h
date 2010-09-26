@@ -791,14 +791,14 @@ LIBSASL_API int sasl_getprop(sasl_conn_t *conn, int propnum,
  * is particularly useful for servers that respond to multiple names. */
 #define	SASL_GSS_LOCAL_NAME	20
 
-typedef struct sasl_channel_bindings {
+typedef struct sasl_channel_binding {
     char *type;
     int critical;
     unsigned long len;
     unsigned char *data;
-} sasl_channel_bindings;
+} sasl_channel_binding;
 
-#define SASL_CHANNEL_BINDINGS   21
+#define SASL_CHANNEL_BINDING    21
 
 /* set property in SASL connection state
  * returns:

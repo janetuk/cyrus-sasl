@@ -46,6 +46,7 @@
 #include <sasl.h>
 #include <prop.h>
 #include <ctype.h>
+#include <stdio.h>
 #include "saslint.h"
 
 struct proppool 

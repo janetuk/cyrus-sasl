@@ -321,7 +321,7 @@ int mysasl_negotiate(FILE *in, FILE *out, sasl_conn_t *conn)
 
 void usage(void)
 {
-    fprintf(stderr, "usage: client [-p port] [-s service] [-m mech] host\n");
+    fprintf(stderr, "usage: client [-c] [-p port] [-s service] [-m mech] host\n");
     exit(EX_USAGE);
 }
 
@@ -341,10 +341,15 @@ int main(int argc, char *argv[])
     int salen;
     int niflags, error;
     struct sockaddr_storage local_ip, remote_ip;
-    sasl_channel_bindings cb;
+    int cb_flag = 0;
+    sasl_channel_binding cb;
 
-    while ((c = getopt(argc, argv, "p:s:m:")) != EOF) {
+    while ((c = getopt(argc, argv, "cp:s:m:")) != EOF) {
 	switch(c) {
+	case 'c':
+	    cb_flag = 1;
+	    break;
+
 	case 'p':
 	    port = optarg;
 	    break;
@@ -420,12 +425,13 @@ int main(int argc, char *argv[])
     r = sasl_client_new(service, host, localaddr, remoteaddr, NULL, 0, &conn);
     if (r != SASL_OK) saslfail(r, "allocating connection state");
 
-    cb.type = "sasl-sample";
-    cb.critical = 0;
-    cb.data = "this is a test of channel bindings";
-    cb.len = strlen(cb.data);
+    if (cb_flag) {
+        cb.type = "sasl-sample";
+        cb.data = "this is a test of channel binding";
+        cb.len = strlen(cb.data);
 
-    sasl_setprop(conn, SASL_CHANNEL_BINDINGS, &cb);
+        sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
+    }
 
     /* set external properties here
        sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */

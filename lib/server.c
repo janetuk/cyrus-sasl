@@ -1214,6 +1214,7 @@ int sasl_server_start(sasl_conn_t *conn,
     int result;
     context_list_t *cur, **prev;
     mechanism_t *m;
+    int plus = 0;
 
     if (_sasl_server_active==0) return SASL_NOTINIT;
 
@@ -1230,13 +1231,11 @@ int sasl_server_start(sasl_conn_t *conn,
     if(serverout) *serverout = NULL;
     if(serveroutlen) *serveroutlen = 0;
 
-    while (m!=NULL)
-    {
-	if ( strcasecmp(mech, m->m.plug->mech_name)==0)
-	{
+    while (m != NULL) {
+	if (_sasl_is_equal_mech(mech, m->m.plug->mech_name, &plus))
 	    break;
-	}
-	m=m->next;
+
+	m = m->next;
     }
   
     if (m==NULL) {
@@ -1511,6 +1510,7 @@ int _sasl_server_listmech(sasl_conn_t *conn,
   size_t resultlen;
   int flag;
   const char *mysep;
+  sasl_server_conn_t *s_conn = (sasl_server_conn_t *) conn;  /* cast */
 
   /* if there hasn't been a sasl_sever_init() fail */
   if (_sasl_server_active==0) return SASL_NOTINIT;
@@ -1535,8 +1535,9 @@ int _sasl_server_listmech(sasl_conn_t *conn,
       INTERROR(conn, SASL_NOMECH);
 
   resultlen = (prefix ? strlen(prefix) : 0)
-            + (strlen(mysep) * (mechlist->mech_length - 1))
-	    + mech_names_len()
+            + (strlen(mysep) * (mechlist->mech_length - 1) * 2)
+	    + (mech_names_len() * 2) /* including -PLUS variant */
+	    + (mechlist->mech_length * (sizeof("-PLUS") - 1))
             + (suffix ? strlen(suffix) : 0)
 	    + 1;
   ret = _buf_alloc(&conn->mechlist_buf,
@@ -1567,6 +1568,16 @@ int _sasl_server_listmech(sasl_conn_t *conn,
 
 	  /* now print the mechanism name */
 	  strcat(conn->mechlist_buf, listptr->m.plug->mech_name);
+
+	  /* advertise -PLUS variant if mechanism and application support CB */
+	  if ((listptr->m.plug->features & SASL_FEAT_CHANNEL_BINDING) &&
+	      SASL_CB_PRESENT(s_conn->sparams)) {
+	    if (pcount != NULL)
+		(*pcount)++;
+	    strcat(conn->mechlist_buf, mysep);
+	    strcat(conn->mechlist_buf, listptr->m.plug->mech_name);
+	    strcat(conn->mechlist_buf, "-PLUS");
+	  }
       }
 
       listptr = listptr->next;
@@ -2044,6 +2055,16 @@ _sasl_print_mechanism (
 
         if (m->plug->features & SASL_FEAT_GETSECRET) {
 	    printf ("%cNEED_GETSECRET", delimiter);
+	    delimiter = '|';
+	}
+
+        if (m->plug->features & SASL_FEAT_GSS_FRAMING) {
+	    printf ("%cGSS_FRAMING", delimiter);
+	    delimiter = '|';
+	}
+
+        if (m->plug->features & SASL_FEAT_CHANNEL_BINDING) {
+	    printf ("%cCHANNEL_BINDING", delimiter);
 	    delimiter = '|';
 	}
     }

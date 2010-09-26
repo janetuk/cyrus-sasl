@@ -1,17 +1,18 @@
-/aclocal.m4
+aclocal.m4
 autom4te.cache
-/compile
-/config.guess
-/config.log
-/config.status
-/config.sub
-/config.h
-/configure
-/depcomp
+compile
+config.cache
+config.guess
+config.log
+config.status
+config.sub
+config.h
+configure
+depcomp
 
-/libtool
-/ltmain.sh
-/missing
+libtool
+ltmain.sh
+missing
 
 .DS_Store
 
@@ -20,8 +21,11 @@ Makefile
 
 *.la
 *.lo
+*.o
 *~
 
 .deps
 .libs
 *.dSYM
+
+stamp-h1

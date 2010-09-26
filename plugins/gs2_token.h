@@ -43,4 +43,4 @@ gs2_make_token_header(
 extern size_t
 gs2_token_size(const gss_OID_desc *mech, size_t body_size);
 
-#endif
+#endif /* _GS2_TOKEN_H_ */

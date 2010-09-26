@@ -368,6 +368,7 @@ int main(int argc, char *argv[])
 	int nfds, fd = -1;
 	FILE *in, *out;
 	fd_set readfds;
+	sasl_channel_bindings cb;
 
 	FD_ZERO(&readfds);
 	for (i = 1; i <= l[0]; i++)
@@ -438,6 +439,12 @@ int main(int argc, char *argv[])
 	r = sasl_server_new(service, myhostname, NULL, localaddr, remoteaddr,
 			    NULL, 0, &conn);
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
+
+        cb.type = "sasl-sample";
+        cb.data = "this is a test of channel bindings";
+        cb.len = strlen(cb.data);
+
+        sasl_setprop(conn, SASL_CHANNEL_BINDINGS, &cb);
 
 	/* set external properties here
 	   sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */

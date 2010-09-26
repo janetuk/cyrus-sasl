@@ -108,7 +108,9 @@ static int simple(void *context __attribute__((unused)),
 		  const char **result,
 		  unsigned *len)
 {
-    static char buf[1024];
+    static char bufU[1024];
+    static char bufA[1024];
+    char *b;
 
     /* paranoia check */
     if (! result)
@@ -117,18 +119,20 @@ static int simple(void *context __attribute__((unused)),
     switch (id) {
     case SASL_CB_USER:
 	printf("please enter an authorization id: ");
+        b = bufU;
 	break;
     case SASL_CB_AUTHNAME:
 	printf("please enter an authentication id: ");
+        b = bufA;
 	break;
     default:
 	return SASL_BADPARAM;
     }
 
-    fgets(buf, sizeof buf, stdin);
-    chop(buf);
-    *result = buf;
-    if (len) *len = strlen(buf);
+    fgets(b, 1024, stdin);
+    chop(b);
+    *result = b;
+    if (len) *len = strlen(b);
   
     return SASL_OK;
 }
@@ -337,6 +341,7 @@ int main(int argc, char *argv[])
     int salen;
     int niflags, error;
     struct sockaddr_storage local_ip, remote_ip;
+    sasl_channel_bindings cb;
 
     while ((c = getopt(argc, argv, "p:s:m:")) != EOF) {
 	switch(c) {
@@ -415,11 +420,18 @@ int main(int argc, char *argv[])
     r = sasl_client_new(service, host, localaddr, remoteaddr, NULL, 0, &conn);
     if (r != SASL_OK) saslfail(r, "allocating connection state");
 
+    cb.type = "sasl-sample";
+    cb.data = "this is a test of channel bindings";
+    cb.len = strlen(cb.data);
+
+    sasl_setprop(conn, SASL_CHANNEL_BINDINGS, &cb);
+
     /* set external properties here
        sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */
 
     /* set required security properties here
        sasl_setprop(conn, SASL_SEC_PROPS, &secprops); */
+
 
     in = fdopen(fd, "r");
     out = fdopen(fd, "w");

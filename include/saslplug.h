@@ -289,7 +289,11 @@ typedef struct sasl_client_params {
 
     int (*spare_fptr1)();
 
-    int chanbindingscrit;
+#define SASL_CB_FLAG_NONE   0       /* client did not support CB */
+#define SASL_CB_FLAG_USED   1       /* client supports and used CB */
+#define SASL_CB_FLAG_WANT   2       /* client supports CB, thinks server does not */
+
+    int chanbindingsflag;
     int chanbindingslen;
     int spare_int3;
 

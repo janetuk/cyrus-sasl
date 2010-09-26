@@ -1212,13 +1212,14 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
     struct sasl_channel_bindings *cb = (struct sasl_channel_bindings *)value;
 
     if (conn->type == SASL_CONN_SERVER) {
+        int cb_flag;
+
         ((sasl_server_conn_t *)conn)->sparams->chanbindingstype = cb->type;
         ((sasl_server_conn_t *)conn)->sparams->chanbindingscrit = cb->critical;
         ((sasl_server_conn_t *)conn)->sparams->chanbindingsdata = cb->data;
         ((sasl_server_conn_t *)conn)->sparams->chanbindingslen = cb->len;
     } else {
         ((sasl_client_conn_t *)conn)->cparams->chanbindingstype = cb->type;
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingscrit = cb->critical;
         ((sasl_client_conn_t *)conn)->cparams->chanbindingsdata = cb->data;
         ((sasl_client_conn_t *)conn)->cparams->chanbindingslen = cb->len;
     }

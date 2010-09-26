@@ -531,11 +531,15 @@ int sasl_client_start(sasl_conn_t *conn,
 	    }
 
 	    /* If client requires channel binding, prefer -PLUS mech */
-	    if (c_conn->cparams->chanbindingscrit &&
-		!sasl_is_plus_mech(name)) {
-		break;
+	    if (c_conn->cparams->chanbindingslen != 0) {
+		if (sasl_is_plus_mech(name))
+		    c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_USED;
+		else
+		    c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_WANT;
+	    } else {
+		c_conn->cparams->chanbindingsflag = SASL_CB_FLAG_NONE;
 	    }
-	    
+
 #ifdef PREFER_MECH
 	    if (strcasecmp(m->m.plug->mech_name, PREFER_MECH) &&
 		bestm && m->m.plug->max_ssf <= bestssf) {

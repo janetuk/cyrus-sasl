@@ -1439,7 +1439,6 @@ int sasl_server_step(sasl_conn_t *conn,
 	ret = do_authorization(s_conn);
     }
 
-
     if (ret == SASL_OK) {
 	/* if we're done, we need to watch out for the following:
 	 * 1. the mech does server-send-last

@@ -451,5 +451,5 @@ int main(int argc, char *argv[])
 
     sasl_done();
 
-    return 0;
+    return r;
 }

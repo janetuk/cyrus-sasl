@@ -460,8 +460,6 @@ LIBSASL_API int sasl_client_plugin_info (const char *mech_list,
 /* log message formatting routine */
 typedef void sasl_logmsg_p(sasl_conn_t *conn, const char *fmt, ...);
 
-struct sasl_server_plug;
-
 /*
  * input parameters to server SASL plugin
  *

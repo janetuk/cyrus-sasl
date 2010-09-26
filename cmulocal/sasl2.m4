@@ -239,10 +239,12 @@ if test "$gssapi" != "no"; then
     AC_EGREP_HEADER(GSS_C_NT_USER_NAME, gssapi.h,
                     [AC_DEFINE(HAVE_GSS_C_NT_USER_NAME,,
                                [Define if your GSSAPI implimentation defines GSS_C_NT_USER_NAME])])
+    AC_EGREP_HEADER(gss_inquire_attrs_for_mech, gssapi.h, rfc5587=yes)
   elif test "$ac_cv_header_gssapi_gssapi_h"; then
     AC_EGREP_HEADER(GSS_C_NT_USER_NAME, gssapi/gssapi.h,
                     [AC_DEFINE(HAVE_GSS_C_NT_USER_NAME,,
                                [Define if your GSSAPI implimentation defines GSS_C_NT_USER_NAME])])
+    AC_EGREP_HEADER(gss_inquire_attrs_for_mech, gssapi/gssapi.h, rfc5587=yes)
   fi
 fi
 
@@ -251,10 +253,14 @@ AC_MSG_CHECKING([GSSAPI])
 if test "$gssapi" != no; then
   AC_MSG_RESULT([with implementation ${gss_impl}])
   AC_CHECK_LIB(resolv,res_search,GSSAPIBASE_LIBS="$GSSAPIBASE_LIBS -lresolv")
-  SASL_MECHS="$SASL_MECHS libgs2.la libgssapiv2.la"
-  SASL_STATIC_OBJS="$SASL_STATIC_OBJS gs2.o gssapi.o"
-  SASL_STATIC_SRCS="$SASL_STATIC_SRCS ../plugins/gs2.c ../plugins/gssapi.c"
-
+  SASL_MECHS="$SASL_MECHS libgssapiv2.la"
+  SASL_STATIC_OBJS="$SASL_STATIC_OBJS gssapi.o"
+  SASL_STATIC_SRCS="$SASL_STATIC_SRCS ../plugins/gssapi.c"
+  if test "$rfc5587" = "yes"; then
+    SASL_MECHS="$SASL_MECHS libgs2.la"
+    SASL_STATIC_OBJS="$SASL_STATIC_OBJS gs2.o"
+    SASL_STATIC_SRCS="$SASL_STATIC_SRCS ../plugins/gs2.c"
+  fi
   cmu_save_LIBS="$LIBS"
   LIBS="$LIBS $GSSAPIBASE_LIBS"
   AC_CHECK_FUNCS(gsskrb5_register_acceptor_identity)

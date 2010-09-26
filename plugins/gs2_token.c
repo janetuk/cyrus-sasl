@@ -164,7 +164,7 @@ gs2_make_token_header(
 
 OM_uint32
 gs2_verify_token_header(OM_uint32 *minor,
-                        gss_OID mech,
+                        gss_const_OID mech,
                         size_t *body_size,
                         unsigned char **buf_in,
                         size_t toksize_in)
@@ -206,13 +206,8 @@ gs2_verify_token_header(OM_uint32 *minor,
     toid.elements = buf;
     buf += toid.length;
 
-    if (mech->elements == NULL) {
-        *mech = toid;
-        if (toid.length == 0)
-            return GSS_S_BAD_MECH;
-    } else if (!g_OID_equal(&toid, mech)) {
+    if (!g_OID_equal(&toid, mech))
         return GSS_S_BAD_MECH;
-    }
 
     *buf_in = buf;
     *body_size = toksize;

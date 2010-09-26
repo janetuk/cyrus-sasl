@@ -29,7 +29,7 @@
 
 extern OM_uint32
 gs2_verify_token_header(OM_uint32 *minor,
-                        gss_OID mech,
+                        gss_const_OID mech,
                         size_t *body_size,
                         unsigned char **buf_in,
                         size_t toksize_in);

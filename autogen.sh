@@ -1,13 +1,13 @@
 #!/bin/sh
 touch NEWS
 libtoolize --copy --install
-aclocal -I cmulocal -I config
+aclocal -I config -I cmulocal
 autoconf
 automake
 autoheader
 
 cd saslauthd
-aclocal -I ../cmulocal -I ../config
+aclocal -I ../config -I ../cmulocal
 autoconf
 automake
 autoheader

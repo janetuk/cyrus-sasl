@@ -1274,6 +1274,7 @@ static sasl_server_plug_t gssapi_server_plugins[] =
 	NULL,				/* mech_avail */
 	NULL				/* spare */
     },
+#if 0
     {
 	"GSS-EAP",			/* mech_name */
 	128,			        /* max_ssf */
@@ -1293,6 +1294,7 @@ static sasl_server_plug_t gssapi_server_plugins[] =
 	NULL,				/* mech_avail */
 	NULL				/* spare */
     }
+#endif
 };
 
 int gssapiv2_server_plug_init(
@@ -1994,6 +1996,7 @@ static sasl_client_plug_t gssapi_client_plugins[] =
 	NULL,				/* spare */
 	NULL				/* spare */
     },
+#if 0
     {
 	"GSS-EAP",			/* mech_name */
 	128,			        /* max_ssf */
@@ -2015,6 +2018,7 @@ static sasl_client_plug_t gssapi_client_plugins[] =
 	NULL,				/* spare */
 	NULL				/* spare */
     },
+#endif
 };
 
 int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)), 

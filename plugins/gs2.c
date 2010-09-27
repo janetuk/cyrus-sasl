@@ -727,10 +727,10 @@ static int gs2_client_mech_step(void *conn_context,
         snprintf(name_buf.value, name_buf.length + 1,
                  "%s@%s", params->service, params->serverFQDN);
 
-        maj_stat = gss_import_name (&min_stat,
-                                    &name_buf,
-                                    GSS_C_NT_HOSTBASED_SERVICE,
-                                    &text->server_name);
+        maj_stat = gss_import_name(&min_stat,
+                                   &name_buf,
+                                   GSS_C_NT_HOSTBASED_SERVICE,
+                                   &text->server_name);
         params->utils->free(name_buf.value);
         name_buf.value = NULL;
 

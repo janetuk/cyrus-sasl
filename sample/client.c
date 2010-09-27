@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
     int niflags, error;
     struct sockaddr_storage local_ip, remote_ip;
     int cb_flag = 0;
-    sasl_channel_binding cb;
+    sasl_channel_binding_t cb;
 
     while ((c = getopt(argc, argv, "cp:s:m:")) != EOF) {
 	switch(c) {
@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
     if (r != SASL_OK) saslfail(r, "allocating connection state");
 
     if (cb_flag) {
-        cb.type = "sasl-sample";
+        cb.name = "sasl-sample";
         cb.data = "this is a test of channel binding";
         cb.len = strlen(cb.data);
 

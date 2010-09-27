@@ -1005,8 +1005,6 @@ _sasl_print_mechanism (
   void *rock
 )
 {
-    char delimiter;
-
     if (stage == SASL_INFO_LIST_START) {
 	printf ("List of auxprop plugins follows\n");
 	return;

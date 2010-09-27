@@ -1209,22 +1209,12 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
         ((sasl_client_conn_t *)conn)->cparams->gss_creds = (void *)value;
     break;
   case SASL_CHANNEL_BINDING: {
-    struct sasl_channel_binding *cb = (struct sasl_channel_binding *)value;
+    const struct sasl_channel_binding *cb = (const struct sasl_channel_binding *)value;
 
-    if (conn->type == SASL_CONN_SERVER) {
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingtype = cb->type;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingdata = cb->data;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindinglen = cb->len;
-        ((sasl_server_conn_t *)conn)->sparams->chanbindingcrit = cb->critical;
-    } else {
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingtype = cb->type;
-        ((sasl_client_conn_t *)conn)->cparams->chanbindingdata = cb->data;
-        ((sasl_client_conn_t *)conn)->cparams->chanbindinglen = cb->len;
-        if (cb->critical != 0)
-            ((sasl_client_conn_t *)conn)->cparams->chanbindingflags |= SASL_CB_FLAG_CRIT;
-        else
-            ((sasl_client_conn_t *)conn)->cparams->chanbindingflags &= ~(SASL_CB_FLAG_CRIT);
-    }
+    if (conn->type == SASL_CONN_SERVER)
+        ((sasl_server_conn_t *)conn)->sparams->cbinding = cb;
+    else
+        ((sasl_client_conn_t *)conn)->cparams->cbinding = cb;
     break;
   }
   default:

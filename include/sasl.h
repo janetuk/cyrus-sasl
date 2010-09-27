@@ -791,12 +791,13 @@ LIBSASL_API int sasl_getprop(sasl_conn_t *conn, int propnum,
  * is particularly useful for servers that respond to multiple names. */
 #define	SASL_GSS_LOCAL_NAME	20
 
+/* Channel binding information. Memory is managed by the caller. */
 typedef struct sasl_channel_binding {
-    char *type;
+    const char *name;
     int critical;
     unsigned long len;
-    unsigned char *data;
-} sasl_channel_binding;
+    const unsigned char *data;
+} sasl_channel_binding_t;
 
 #define SASL_CHANNEL_BINDING    21
 

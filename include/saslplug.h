@@ -193,12 +193,12 @@ typedef struct sasl_out_params {
     void *client_creds;
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *gss_peer_name;
-    void *gss_local_name;
-    void *spare_ptr4;
+    const void *gss_peer_name;
+    const void *gss_local_name;
+    const char *cbindingname;   /* channel binding name from packet */
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int chanbindingflag;
+    unsigned int cbindingdisp;  /* channel binding disposition from client */
     int spare_int2;
     int spare_int3;
     int spare_int4;
@@ -219,7 +219,18 @@ typedef enum  {
     SASL_INFO_LIST_END
 } sasl_info_callback_stage_t;
 
+/******************************
+ * Channel binding macros     **
+ ******************************/
 
+/* TRUE if channel binding is non-NULL */
+#define SASL_CB_DISP_NONE   0x00    /* client did not support CB */
+#define SASL_CB_DISP_USED   0x01    /* client supports CB, thinks server does not */
+#define SASL_CB_DISP_WANT   0x02    /* client supports and used CB */
+
+#define SASL_CB_PRESENT(params)     ((params)->cbinding != NULL)
+#define SASL_CB_CRITICAL(params)    (SASL_CB_PRESENT(params) && \
+				     (params)->cbinding->critical)
 
 /******************************
  * Client Mechanism Functions *
@@ -254,9 +265,9 @@ typedef struct sasl_client_params {
     sasl_ssf_t external_ssf;	/* external SSF active */
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *gss_creds;
-    void *chanbindingtype;
-    void *chanbindingdata;
+    const void *gss_creds;                  /* GSS credential handle */
+    const sasl_channel_binding_t *cbinding; /* client channel binding */
+    void *spare_ptr3;
     void *spare_ptr4;
 
     /* Canonicalize a user name from on-wire to internal format
@@ -289,13 +300,8 @@ typedef struct sasl_client_params {
 
     int (*spare_fptr1)();
 
-#define SASL_CB_FLAG_NONE   0x00    /* client did not support CB */
-#define SASL_CB_FLAG_USED   0x01    /* client supports CB, thinks server does not */
-#define SASL_CB_FLAG_WANT   0x02    /* client supports and used CB */
-#define SASL_CB_FLAG_CRIT   0x10    /* client requires CB */
-    int chanbindingflags;
-#define SASL_CB_PRESENT(params) ((params)->chanbindingtype != NULL && (params)->chanbindinglen)
-    int chanbindinglen;
+    unsigned int cbindingdisp;
+    unsigned int spare_int2;
     int spare_int3;
 
     /* flags field as passed to sasl_client_new */
@@ -561,14 +567,14 @@ typedef struct sasl_server_params {
     struct propctx *propctx;
 
     /* for additions which don't require a version upgrade; set to 0 */
-    void *gss_creds;
-    void *chanbindingtype;
-    void *chanbindingdata;
+    const void *gss_creds;                  /* GSS credential handle */
+    const sasl_channel_binding_t *cbinding; /* server channel binding */
+    void *spare_ptr3;
     void *spare_ptr4;
     int (*spare_fptr1)();
     int (*spare_fptr2)();
-    int chanbindinglen;
-    int chanbindingcrit;
+    int spare_int1;
+    int spare_int2;
     int spare_int3;
 
     /* flags field as passed to sasl_server_new */

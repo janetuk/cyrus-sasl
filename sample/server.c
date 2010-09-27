@@ -373,7 +373,7 @@ int main(int argc, char *argv[])
 	int nfds, fd = -1;
 	FILE *in, *out;
 	fd_set readfds;
-	sasl_channel_binding cb;
+	sasl_channel_binding_t cb;
 
 	FD_ZERO(&readfds);
 	for (i = 1; i <= l[0]; i++)
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
 			    NULL, 0, &conn);
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
 
-        cb.type = "sasl-sample";
+        cb.name = "sasl-sample";
         cb.critical = cb_flag;
         cb.data = "this is a test of channel binding";
         cb.len = strlen(cb.data);

@@ -185,7 +185,7 @@ int *listensock(const char *port, const int af)
 
 void usage(void)
 {
-    fprintf(stderr, "usage: server [-p port] [-s service] [-m mech]\n");
+    fprintf(stderr, "usage: server [-c] [-h hostname] [-p port] [-s service] [-m mech]\n");
     exit(EX_USAGE);
 }
 
@@ -319,15 +319,20 @@ int main(int argc, char *argv[])
     int c;
     char *port = "12345";
     char *service = "rcmd";
+    char *hostname = NULL;
     int *l, maxfd=0;
     int r, i;
     sasl_conn_t *conn;
     int cb_flag = 0;
 
-    while ((c = getopt(argc, argv, "cp:s:m:")) != EOF) {
+    while ((c = getopt(argc, argv, "ch:p:s:m:")) != EOF) {
 	switch(c) {
 	case 'c':
 	    cb_flag = 1;
+	    break;
+
+	case 'h':
+	    hostname = optarg;
 	    break;
 
 	case 'p':
@@ -438,19 +443,22 @@ int main(int argc, char *argv[])
 	}
 	snprintf(remoteaddr, sizeof(remoteaddr), "%s;%s", hbuf, pbuf);
 
-	r = gethostname(myhostname, sizeof(myhostname)-1);
-	if(r == -1) saslfail(r, "getting hostname");
+	if (hostname == NULL) {
+	    r = gethostname(myhostname, sizeof(myhostname)-1);
+	    if(r == -1) saslfail(r, "getting hostname");
+	    hostname = myhostname;
+	}
 
-	r = sasl_server_new(service, myhostname, NULL, localaddr, remoteaddr,
+	r = sasl_server_new(service, hostname, NULL, localaddr, remoteaddr,
 			    NULL, 0, &conn);
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
 
-        cb.name = "sasl-sample";
-        cb.critical = cb_flag;
-        cb.data = "this is a test of channel binding";
-        cb.len = strlen(cb.data);
+	cb.name = "sasl-sample";
+	cb.critical = cb_flag;
+	cb.data = "this is a test of channel binding";
+	cb.len = strlen(cb.data);
 
-        sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
+	sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
 
 	/* set external properties here
 	   sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */

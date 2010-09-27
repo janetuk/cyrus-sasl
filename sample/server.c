@@ -322,9 +322,14 @@ int main(int argc, char *argv[])
     int *l, maxfd=0;
     int r, i;
     sasl_conn_t *conn;
+    int cb_flag = 0;
 
-    while ((c = getopt(argc, argv, "p:s:m:")) != EOF) {
+    while ((c = getopt(argc, argv, "cp:s:m:")) != EOF) {
 	switch(c) {
+	case 'c':
+	    cb_flag = 1;
+	    break;
+
 	case 'p':
 	    port = optarg;
 	    break;
@@ -441,7 +446,7 @@ int main(int argc, char *argv[])
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
 
         cb.type = "sasl-sample";
-        cb.critical = 0;
+        cb.critical = cb_flag;
         cb.data = "this is a test of channel binding";
         cb.len = strlen(cb.data);
 

@@ -1462,7 +1462,7 @@ int sasl_server_step(sasl_conn_t *conn,
         } else if (conn->oparams.chanbindingflag == SASL_CB_FLAG_WANT &&
             SASL_CB_PRESENT(s_conn->sparams)) {
             sasl_seterror(conn, 0,
-                          "client incorrectly determined server had no channel binding");
+                          "client incorrectly assumed server had no channel binding");
             ret = SASL_BADAUTH;
         } else if (conn->oparams.user == NULL || conn->oparams.authid == NULL) {
 	    sasl_seterror(conn, 0,
@@ -1567,25 +1567,34 @@ int _sasl_server_listmech(sasl_conn_t *conn,
   for (lup = 0; lup < mechlist->mech_length; lup++) {
       /* currently, we don't use the "user" parameter for anything */
       if (mech_permitted(conn, listptr) == SASL_OK) {
-	  if (pcount != NULL)
+          /*
+           * If the server would never succeed in the authentication of 
+           * he non-PLUS-variant due to policy reasons, it MUST advertise
+           * only the PLUS-variant.
+           */
+          if (!s_conn->sparams->chanbindingcrit) {
+            if (pcount != NULL)
 	      (*pcount)++;
-
-	  /* print separator */
-	  if (flag) {
-	      strcat(conn->mechlist_buf, mysep);
-	  } else {
-	      flag = 1;
-	  }
-
-	  /* now print the mechanism name */
-	  strcat(conn->mechlist_buf, listptr->m.plug->mech_name);
-
-	  /* advertise -PLUS variant if mechanism and application support CB */
+            if (flag)
+              strcat(conn->mechlist_buf, mysep);
+            else
+              flag = 1;
+	    strcat(conn->mechlist_buf, listptr->m.plug->mech_name);
+          }
+          /*
+           * If the server cannot support channel binding, it SHOULD
+           * advertise only the non-PLUS-variant. Here, supporting channel
+           * binding means the underlying SASL mechanism supports it and
+           * the application has set some channel binding data.
+           */
 	  if ((listptr->m.plug->features & SASL_FEAT_CHANNEL_BINDING) &&
 	      SASL_CB_PRESENT(s_conn->sparams)) {
 	    if (pcount != NULL)
 		(*pcount)++;
-	    strcat(conn->mechlist_buf, mysep);
+            if (flag)
+              strcat(conn->mechlist_buf, mysep);
+            else
+              flag = 1;
 	    strcat(conn->mechlist_buf, listptr->m.plug->mech_name);
 	    strcat(conn->mechlist_buf, "-PLUS");
 	  }

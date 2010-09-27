@@ -62,9 +62,9 @@
 #include "gs2_token.h"
 
 #define GS2_CB_FLAG_MASK    0x0F
-#define GS2_CB_FLAG_P       SASL_CB_FLAG_USED
-#define GS2_CB_FLAG_N       SASL_CB_FLAG_NONE
-#define GS2_CB_FLAG_Y       SASL_CB_FLAG_WANT
+#define GS2_CB_FLAG_P       0x01
+#define GS2_CB_FLAG_N       0x02
+#define GS2_CB_FLAG_Y       0x03
 #define GS2_NONSTD_FLAG     0x10
 
 typedef struct context {
@@ -487,7 +487,7 @@ gs2_server_mech_step(void *conn_context,
         oparams->chanbindingflag = SASL_CB_FLAG_USED;
         break;
     case GS2_CB_FLAG_Y:
-        oparams->chanbindingflag == SASL_CB_FLAG_WANT;
+        oparams->chanbindingflag = SASL_CB_FLAG_WANT;
         break;
     }
 

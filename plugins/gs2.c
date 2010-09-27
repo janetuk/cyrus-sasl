@@ -1561,30 +1561,6 @@ gs2_get_init_creds(context_t *text,
     }
 
     /*
-     * If the application has provided an authentication identity, parse it.
-     */
-    if (text->client_name == GSS_C_NO_NAME) {
-        gss_buffer_desc name_buf;
-
-        if (oparams->authid != NULL) {
-            name_buf.length = strlen(oparams->authid);
-            name_buf.value = (void *)oparams->authid;
-        } else {
-            name_buf.length = strlen(authid);
-            name_buf.value = (void *)authid;
-        }
-
-        if (name_buf.value != NULL) {
-            maj_stat = gss_import_name(&min_stat,
-                                       &name_buf,
-                                       GSS_C_NT_USER_NAME,
-                                       &text->client_name);
-            if (GSS_ERROR(maj_stat))
-                goto cleanup;
-        }
-    }
-
-    /*
      * Get the authorization identity.
      */
     if (oparams->user == NULL) {
@@ -1593,6 +1569,44 @@ gs2_get_init_creds(context_t *text,
             result = user_result;
             goto cleanup;
         }
+    }
+
+    if (auth_result == SASL_OK && user_result == SASL_OK &&
+        oparams->authid == NULL) {
+        if (userid == NULL || userid[0] == '\0') {
+            result = params->canon_user(params->utils->conn, authid, 0,
+                                        SASL_CU_AUTHID | SASL_CU_AUTHZID,
+                                        oparams);
+        } else {
+            result = params->canon_user(params->utils->conn,
+                                        authid, 0, SASL_CU_AUTHID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+
+            result = params->canon_user(params->utils->conn,
+                                        userid, 0, SASL_CU_AUTHZID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+        }
+
+        assert(oparams->authid != NULL);
+    }
+
+    /*
+     * If the application has provided an authentication identity, parse it.
+     */
+    if (text->client_name == GSS_C_NO_NAME && oparams->authid != NULL) {
+        gss_buffer_desc name_buf;
+
+        name_buf.length = strlen(oparams->authid);
+        name_buf.value = (void *)oparams->authid;
+
+        maj_stat = gss_import_name(&min_stat,
+                                   &name_buf,
+                                   GSS_C_NT_USER_NAME,
+                                   &text->client_name);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
     }
 
     /*
@@ -1672,26 +1686,6 @@ gs2_get_init_creds(context_t *text,
                                NULL, NULL);
         if (result == SASL_OK)
             result = SASL_INTERACT;
-    } else if (oparams->authid == NULL) {
-        /*
-         * XXX we acquired GSS credentials pre-canonicalisation. Just noting
-         * this might cause some problems with applications.
-         */
-        if (userid == NULL || userid[0] == '\0') {
-            result = params->canon_user(params->utils->conn, authid, 0,
-                                        SASL_CU_AUTHID | SASL_CU_AUTHZID,
-                                        oparams);
-        } else {
-            result = params->canon_user(params->utils->conn,
-                                        authid, 0, SASL_CU_AUTHID, oparams);
-            if (result != SASL_OK)
-                goto cleanup;
-
-            result = params->canon_user(params->utils->conn,
-                                        userid, 0, SASL_CU_AUTHZID, oparams);
-            if (result != SASL_OK)
-                goto cleanup;
-        }
     }
 
 cleanup:

@@ -185,7 +185,7 @@ client_idle(sasl_conn_t *conn)
 /* initialize the SASL client drivers
  *  callbacks      -- base callbacks for all client connections
  * returns:
- *  SASL_OK	-- Success
+ *  SASL_OK        -- Success
  *  SASL_NOMEM     -- Not enough memory
  *  SASL_BADVERS   -- Mechanism version mismatch
  *  SASL_BADPARAM  -- error in config file
@@ -452,11 +452,11 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 
 /* select a mechanism for a connection
  *  mechlist      -- mechanisms server has available (punctuation ignored)
- *  secret	-- optional secret from previous session
+ *  secret        -- optional secret from previous session
  * output:
  *  prompt_need   -- on SASL_INTERACT, list of prompts needed to continue
  *  clientout     -- the initial client response to send to the server
- *  mech	  -- set to mechanism name
+ *  mech          -- set to mechanism name
  *
  * Returns:
  *  SASL_OK       -- success
@@ -662,14 +662,14 @@ int sasl_client_start(sasl_conn_t *conn,
     /* do a step -- but only if we can do a client-send-first */
  dostep:
     if(clientout) {
-	if(c_conn->mech->m.plug->features & SASL_FEAT_SERVER_FIRST) {
-	    *clientout = NULL;
-	    *clientoutlen = 0;
-	    result = SASL_CONTINUE;
-	} else {
-	    result = sasl_client_step(conn, NULL, 0, prompt_need,
-				      clientout, clientoutlen);
-	}
+        if(c_conn->mech->m.plug->features & SASL_FEAT_SERVER_FIRST) {
+            *clientout = NULL;
+            *clientoutlen = 0;
+            result = SASL_CONTINUE;
+        } else {
+            result = sasl_client_step(conn, NULL, 0, prompt_need,
+                                      clientout, clientoutlen);
+        }
     }
     else
 	result = SASL_CONTINUE;
@@ -682,13 +682,13 @@ int sasl_client_start(sasl_conn_t *conn,
 
 /* do a single authentication step.
  *  serverin    -- the server message received by the client, MUST have a NUL
- *		 sentinel, not counted by serverinlen
+ *                 sentinel, not counted by serverinlen
  * output:
  *  prompt_need -- on SASL_INTERACT, list of prompts needed to continue
  *  clientout   -- the client response to send to the server
  *
  * returns:
- *  SASL_OK	-- success
+ *  SASL_OK        -- success
  *  SASL_INTERACT  -- user interaction needed to fill in prompt_need list
  *  SASL_BADPROT   -- server protocol incorrect/cancelled
  *  SASL_BADSERV   -- server failed mutual auth
@@ -1066,7 +1066,7 @@ int sasl_client_plugin_info (
 		m = m->next;
 	    }
 	} else {
-	    mech_list = strdup (c_mech_list);
+            mech_list = strdup (c_mech_list);
 
 	    cur_mech = mech_list;
 
@@ -1092,7 +1092,7 @@ int sasl_client_plugin_info (
 		cur_mech = p;
 	    }
 
-	    free (mech_list);
+            free (mech_list);
 	}
 
 	info_cb (NULL, SASL_INFO_LIST_END, info_cb_rock);

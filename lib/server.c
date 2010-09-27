@@ -1589,7 +1589,7 @@ int _sasl_server_listmech(sasl_conn_t *conn,
       /* currently, we don't use the "user" parameter for anything */
       if (mech_permitted(conn, listptr) == SASL_OK) {
           /*
-           * If the server would never succeed in the authentication of 
+           * If the server would never succeed in the authentication of
            * he non-PLUS-variant due to policy reasons, it MUST advertise
            * only the PLUS-variant.
            */

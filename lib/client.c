@@ -419,9 +419,18 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
     if (list == NULL)
 	return SASL_NOMEM;
 
+    /* xxx confirm this with rfc 2222
+     * SASL mechanism allowable characters are "AZaz-_"
+     * seperators can be any other characters and of any length
+     * even variable lengths between
+     *
+     * Apps should be encouraged to simply use space or comma space
+     * though
+     */
+#define ismechchar(c)   (isalnum((c)) || (c) == '_' || (c) == '-')
     do {
 	for (start = p = mechs, i = 0; *p != '\0'; p++) {
-	    if (isspace(*p) || p[1] == '\0') {
+	    if (!ismechchar(*p) || p[1] == '\0') {
 		size_t len = p - start;
 
 		if (p[1] == '\0')
@@ -465,14 +474,6 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
  *  SASL_INTERACT -- user interaction needed to fill in prompt_need list
  */
 
-/* xxx confirm this with rfc 2222
- * SASL mechanism allowable characters are "AZaz-_"
- * seperators can be any other characters and of any length
- * even variable lengths between
- *
- * Apps should be encouraged to simply use space or comma space
- * though
- */
 int sasl_client_start(sasl_conn_t *conn,
 		      const char *mechlist,
 		      sasl_interact_t **prompt_need,

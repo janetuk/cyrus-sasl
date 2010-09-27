@@ -1220,6 +1220,10 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
         ((sasl_client_conn_t *)conn)->cparams->chanbindingtype = cb->type;
         ((sasl_client_conn_t *)conn)->cparams->chanbindingdata = cb->data;
         ((sasl_client_conn_t *)conn)->cparams->chanbindinglen = cb->len;
+        if (cb->critical != 0)
+            ((sasl_client_conn_t *)conn)->cparams->chanbindingflags |= SASL_CB_FLAG_CRIT;
+        else
+            ((sasl_client_conn_t *)conn)->cparams->chanbindingflags &= ~(SASL_CB_FLAG_CRIT);
     }
     break;
   }

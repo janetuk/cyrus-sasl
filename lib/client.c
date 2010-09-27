@@ -485,7 +485,7 @@ int sasl_client_start(sasl_conn_t *conn,
     cmechanism_t *m=NULL,*bestm=NULL;
     size_t i, list_len;
     sasl_ssf_t bestssf = 0, minssf = 0;
-    int result, server_can_cb = 0;
+    int result, server_can_cb = 0, cb_flag;
 
     if(_sasl_client_active==0) return SASL_NOTINIT;
 
@@ -517,12 +517,19 @@ int sasl_client_start(sasl_conn_t *conn,
 				      &list_len,
 				      &server_can_cb);
     if (result != 0)
-	return result;
+	goto done;
 
-    if (SASL_CB_PRESENT(c_conn->cparams) && server_can_cb)
-	c_conn->cparams->chanbindingflag = SASL_CB_FLAG_WANT;
-    else
-	c_conn->cparams->chanbindingflag = SASL_CB_FLAG_NONE;
+    if (SASL_CB_PRESENT(c_conn->cparams)) {
+	if (server_can_cb == 0 &&
+	    (c_conn->cparams->chanbindingflags & SASL_CB_FLAG_CRIT)) {
+	    result = SASL_NOMECH;
+	    goto done;
+	} else {
+	    cb_flag = SASL_CB_FLAG_WANT;
+	}
+    } else {
+	cb_flag = SASL_CB_FLAG_NONE;
+    }
 
     for (i = 0, name = ordered_mechs; i < list_len; i++) {
 	/* foreach in client list */
@@ -610,7 +617,7 @@ int sasl_client_start(sasl_conn_t *conn,
 
 	    /* Prefer server advertised CB mechanisms */
 	    if (SASL_CB_PRESENT(c_conn->cparams) && plus)
-		c_conn->cparams->chanbindingflag = SASL_CB_FLAG_USED;
+		cb_flag = SASL_CB_FLAG_USED;
 
 	    if (mech) {
 		*mech = m->m.plug->mech_name;
@@ -642,6 +649,7 @@ int sasl_client_start(sasl_conn_t *conn,
 
     c_conn->cparams->external_ssf = conn->external.ssf;
     c_conn->cparams->props = conn->props;
+    c_conn->cparams->chanbindingflags |= cb_flag;
     c_conn->mech = bestm;
 
     /* init that plugin */

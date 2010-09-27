@@ -519,7 +519,6 @@ int sasl_client_start(sasl_conn_t *conn,
     if (result != 0)
 	return result;
 
-    /* If we have CB and the server supports it, we should use it */
     if (SASL_CB_PRESENT(c_conn->cparams) && server_can_cb)
 	c_conn->cparams->chanbindingflag = SASL_CB_FLAG_WANT;
     else

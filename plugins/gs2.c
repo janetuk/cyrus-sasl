@@ -447,10 +447,12 @@ gs2_server_mech_step(void *conn_context,
 
     assert(maj_stat == GSS_S_COMPLETE);
 
+#if 0
     if (!g_OID_equal(text->mechanism, actual_mech)) {
         ret = SASL_WRONGMECH;
         goto cleanup;
     }
+#endif
     if ((out_flags & GSS_C_SEQUENCE_FLAG) == 0)  {
         ret = SASL_BADAUTH;
         goto cleanup;

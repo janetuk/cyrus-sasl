@@ -522,7 +522,7 @@ int sasl_client_start(sasl_conn_t *conn,
 
     if (SASL_CB_PRESENT(c_conn->cparams)) {
 	if (server_can_cb == 0 && SASL_CB_CRITICAL(c_conn->cparams)) {
-	    result = SASL_NOMECH;
+	    result = SASL_BADBINDING;
 	    goto done;
 	} else {
 	    cbindingdisp = SASL_CB_DISP_WANT;

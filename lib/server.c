@@ -1459,7 +1459,7 @@ int sasl_server_step(sasl_conn_t *conn,
 	    if (SASL_CB_CRITICAL(s_conn->sparams)) {
 		sasl_seterror(conn, 0,
 			      "server requires channel binding but client provided none");
-		ret = SASL_BADAUTH;
+		ret = SASL_BADBINDING;
 	    }
 	    break;
 	case SASL_CB_DISP_WANT:
@@ -1473,13 +1473,13 @@ int sasl_server_step(sasl_conn_t *conn,
 	    if (!SASL_CB_PRESENT(s_conn->sparams)) {
 		sasl_seterror(conn, 0,
 			      "client provided channel binding but server had none");
-		ret = SASL_BADAUTH;
+		ret = SASL_BADBINDING;
 	    } else if (strcmp(conn->oparams.cbindingname,
 		       s_conn->sparams->cbinding->name) != 0) {
 		sasl_seterror(conn, 0,
 			      "client channel binding %s does not match server %s",
 			      conn->oparams.cbindingname, s_conn->sparams->cbinding->name);
-		ret = SASL_BADAUTH;
+		ret = SASL_BADBINDING;
 	    }
 	    break;
 	}

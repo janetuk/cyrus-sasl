@@ -426,7 +426,7 @@ gs2_server_mech_step(void *conn_context,
         sasl_gs2_log(text->utils, maj_stat, min_stat);
         text->utils->seterror(text->utils->conn, SASL_NOLOG,
                               "GS2 Failure: gss_accept_sec_context");
-        ret = SASL_BADAUTH;
+        ret = (maj_stat == GSS_S_BAD_BINDINGS) ? SASL_BADBINDING : SASL_BADAUTH;
         goto cleanup;
     }
 
@@ -478,14 +478,14 @@ gs2_server_mech_step(void *conn_context,
                                    GSS_C_NT_USER_NAME,
                                    &without);
         if (GSS_ERROR(maj_stat)) {
-            ret = SASL_BADAUTH;
+            ret = SASL_FAIL;
             goto cleanup;
         }
 
         maj_stat = gss_compare_name(&min_stat, text->client_name,
                                     without, &equal);
         if (GSS_ERROR(maj_stat)) {
-            ret = SASL_BADAUTH;
+            ret = SASL_FAIL;
             goto cleanup;
         }
 
@@ -1061,7 +1061,7 @@ gs2_save_cbindings(context_t *text,
     return SASL_OK;
 }
 
-#define CHECK_REMAIN(n)     do { if (remain < (n)) return SASL_BADAUTH; } while (0)
+#define CHECK_REMAIN(n)     do { if (remain < (n)) return SASL_BADPROT; } while (0)
 
 /*
  * Verify gs2-header, save authzid and channel bindings to context.
@@ -1102,7 +1102,7 @@ gs2_verify_initial_message(context_t *text,
         CHECK_REMAIN(1); /* = */
         remain--;
         if (*p++ != '=')
-            return SASL_BADAUTH;
+            return SASL_BADPROT;
 
         ret = gs2_unescape_authzid(text->utils, &p, &remain, &text->cbindingname);
         if (ret != SASL_OK)
@@ -1121,7 +1121,7 @@ gs2_verify_initial_message(context_t *text,
     CHECK_REMAIN(1); /* , */
     remain--;
     if (*p++ != ',')
-        return SASL_BADAUTH;
+        return SASL_BADPROT;
 
     /* authorization identity */
     if (remain > 1 && memcmp(p, "a=", 2) == 0) {
@@ -1138,7 +1138,7 @@ gs2_verify_initial_message(context_t *text,
     CHECK_REMAIN(1); /* , */
     remain--;
     if (*p++ != ',')
-        return SASL_BADAUTH;
+        return SASL_BADPROT;
 
     buf.length = inlen - remain;
     buf.value = (void *)in;

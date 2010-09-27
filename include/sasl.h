@@ -171,6 +171,7 @@
 #define SASL_NOCHANGE   -22  /* requested change was not needed */
 #define SASL_WEAKPASS   -27  /* passphrase is too weak for security policy */
 #define SASL_NOUSERPASS -28  /* user supplied passwords not permitted */
+#define SASL_BADBINDING -29  /* channel binding failure */
 
 /* max size of a sasl mechanism name */
 #define SASL_MECHNAMEMAX 20

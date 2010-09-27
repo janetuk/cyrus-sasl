@@ -1276,6 +1276,7 @@ const char *sasl_errstring(int saslerr,
     case SASL_NOCHANGE:   return "requested change was not needed";
     case SASL_WEAKPASS:   return "passphrase is too weak for security policy";
     case SASL_NOUSERPASS: return "user supplied passwords are not permitted";
+    case SASL_BADBINDING: return "channel binding failure";
 
     default:   return "undefined error!";
     }

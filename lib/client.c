@@ -185,7 +185,7 @@ client_idle(sasl_conn_t *conn)
 /* initialize the SASL client drivers
  *  callbacks      -- base callbacks for all client connections
  * returns:
- *  SASL_OK        -- Success
+ *  SASL_OK	-- Success
  *  SASL_NOMEM     -- Not enough memory
  *  SASL_BADVERS   -- Mechanism version mismatch
  *  SASL_BADPARAM  -- error in config file
@@ -272,18 +272,18 @@ static void client_dispose(sasl_conn_t *pconn)
  *  service       -- registered name of the service using SASL (e.g. "imap")
  *  serverFQDN    -- the fully qualified domain name of the server
  *  iplocalport   -- client IPv4/IPv6 domain literal string with port
- *                    (if NULL, then mechanisms requiring IPaddr are disabled)
+ *		    (if NULL, then mechanisms requiring IPaddr are disabled)
  *  ipremoteport  -- server IPv4/IPv6 domain literal string with port
- *                    (if NULL, then mechanisms requiring IPaddr are disabled)
+ *		    (if NULL, then mechanisms requiring IPaddr are disabled)
  *  prompt_supp   -- list of client interactions supported
- *                   may also include sasl_getopt_t context & call
- *                   NULL prompt_supp = user/pass via SASL_INTERACT only
- *                   NULL proc = interaction supported via SASL_INTERACT
+ *		   may also include sasl_getopt_t context & call
+ *		   NULL prompt_supp = user/pass via SASL_INTERACT only
+ *		   NULL proc = interaction supported via SASL_INTERACT
  *  secflags      -- security flags (see above)
  * in/out:
- *  pconn         -- connection negotiation structure
- *                   pointer to NULL => allocate new
- *                   non-NULL => recycle storage and go for next available mech
+ *  pconn	 -- connection negotiation structure
+ *		   pointer to NULL => allocate new
+ *		   non-NULL => recycle storage and go for next available mech
  *
  * Returns:
  *  SASL_OK       -- success
@@ -402,11 +402,11 @@ _mech_plus_p(const char *mech, size_t len)
  */
 static int
 _sasl_client_order_mechs(const sasl_utils_t *utils,
-                         const char *mechs,
-                         int has_cb_data,
-                         char **ordered_mechs,
-                         size_t *count,
-                         int *server_can_cb)
+			 const char *mechs,
+			 int has_cb_data,
+			 char **ordered_mechs,
+			 size_t *count,
+			 int *server_can_cb)
 {
     char *list, *listp;
     size_t i;
@@ -417,31 +417,31 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 
     listp = list = utils->malloc(strlen(mechs) + 1);
     if (list == NULL)
-        return SASL_NOMEM;
+	return SASL_NOMEM;
 
     do {
-        for (start = p = mechs, i = 0; *p != '\0'; p++) {
-            if (isspace(*p) || p[1] == '\0') {
-                size_t len = p - start;
+	for (start = p = mechs, i = 0; *p != '\0'; p++) {
+	    if (isspace(*p) || p[1] == '\0') {
+		size_t len = p - start;
 
-                if (p[1] == '\0')
-                    len++;
+		if (p[1] == '\0')
+		    len++;
 
-                if (_mech_plus_p(start, len) == has_cb_data) {
-                    memcpy(listp, start, len);
-                    listp[len] = '\0';
-                    listp += len + 1;
-                    (*count)++;
-                    if (*server_can_cb == 0 && has_cb_data)
-                        *server_can_cb = 1;
-                }
-                start = p + 1;
-            }
-        }
-        if (has_cb_data)
-            has_cb_data = 0;
-        else
-            break;
+		if (_mech_plus_p(start, len) == has_cb_data) {
+		    memcpy(listp, start, len);
+		    listp[len] = '\0';
+		    listp += len + 1;
+		    (*count)++;
+		    if (*server_can_cb == 0 && has_cb_data)
+			*server_can_cb = 1;
+		}
+		start = p + 1;
+	    }
+	}
+	if (has_cb_data)
+	    has_cb_data = 0;
+	else
+	    break;
     } while (1);
 
     *listp = '\0';
@@ -452,11 +452,11 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 
 /* select a mechanism for a connection
  *  mechlist      -- mechanisms server has available (punctuation ignored)
- *  secret        -- optional secret from previous session
+ *  secret	-- optional secret from previous session
  * output:
  *  prompt_need   -- on SASL_INTERACT, list of prompts needed to continue
  *  clientout     -- the initial client response to send to the server
- *  mech          -- set to mechanism name
+ *  mech	  -- set to mechanism name
  *
  * Returns:
  *  SASL_OK       -- success
@@ -511,27 +511,27 @@ int sasl_client_start(sasl_conn_t *conn,
     }
 
     result = _sasl_client_order_mechs(c_conn->cparams->utils,
-                                      mechlist,
-                                      SASL_CB_PRESENT(c_conn->cparams),
-                                      &ordered_mechs,
-                                      &list_len,
-                                      &server_can_cb);
+				      mechlist,
+				      SASL_CB_PRESENT(c_conn->cparams),
+				      &ordered_mechs,
+				      &list_len,
+				      &server_can_cb);
     if (result != 0)
-        return result;
+	return result;
 
     /* If we have CB and the server supports it, we should use it */
     if (SASL_CB_PRESENT(c_conn->cparams) && server_can_cb)
-        c_conn->cparams->chanbindingflag = SASL_CB_FLAG_WANT;
+	c_conn->cparams->chanbindingflag = SASL_CB_FLAG_WANT;
     else
-        c_conn->cparams->chanbindingflag = SASL_CB_FLAG_NONE;
+	c_conn->cparams->chanbindingflag = SASL_CB_FLAG_NONE;
 
     for (i = 0, name = ordered_mechs; i < list_len; i++) {
 	/* foreach in client list */
 	for (m = cmechlist->mech_list; m != NULL; m = m->next) {
 	    int myflags, plus;
 
-            if (!_sasl_is_equal_mech(name, m->m.plug->mech_name, &plus))
-                continue;
+	    if (!_sasl_is_equal_mech(name, m->m.plug->mech_name, &plus))
+		continue;
 
 	    /* Do we have the prompts for it? */
 	    if (!have_prompts(conn, m->m.plug))
@@ -555,10 +555,10 @@ int sasl_client_start(sasl_conn_t *conn,
 	    }
 
 	    /* Can we meet it's features? */
-            if (SASL_CB_PRESENT(c_conn->cparams) &&
-                !(m->m.plug->features & SASL_FEAT_CHANNEL_BINDING)) {
-                break;
-            }
+	   if (SASL_CB_PRESENT(c_conn->cparams) &&
+		!(m->m.plug->features & SASL_FEAT_CHANNEL_BINDING)) {
+		break;
+	    }
 
 	    if ((m->m.plug->features & SASL_FEAT_NEEDSERVERFQDN)
 		&& !conn->serverFQDN) {
@@ -609,9 +609,9 @@ int sasl_client_start(sasl_conn_t *conn,
 		break;
 	    }
 
-            /* Prefer server advertised CB mechanisms */
-            if (SASL_CB_PRESENT(c_conn->cparams) && plus)
-                c_conn->cparams->chanbindingflag = SASL_CB_FLAG_USED;
+	    /* Prefer server advertised CB mechanisms */
+	    if (SASL_CB_PRESENT(c_conn->cparams) && plus)
+		c_conn->cparams->chanbindingflag = SASL_CB_FLAG_USED;
 
 	    if (mech) {
 		*mech = m->m.plug->mech_name;
@@ -620,7 +620,7 @@ int sasl_client_start(sasl_conn_t *conn,
 	    bestm = m;
 	    break;
 	}
-        name += strlen(name) + 1;
+	name += strlen(name) + 1;
     }
 
     if (bestm == NULL) {
@@ -654,33 +654,33 @@ int sasl_client_start(sasl_conn_t *conn,
     /* do a step -- but only if we can do a client-send-first */
  dostep:
     if(clientout) {
-        if(c_conn->mech->m.plug->features & SASL_FEAT_SERVER_FIRST) {
-            *clientout = NULL;
-            *clientoutlen = 0;
-            result = SASL_CONTINUE;
-        } else {
-            result = sasl_client_step(conn, NULL, 0, prompt_need,
-                                      clientout, clientoutlen);
-        }
+	if(c_conn->mech->m.plug->features & SASL_FEAT_SERVER_FIRST) {
+	    *clientout = NULL;
+	    *clientoutlen = 0;
+	    result = SASL_CONTINUE;
+	} else {
+	    result = sasl_client_step(conn, NULL, 0, prompt_need,
+				      clientout, clientoutlen);
+	}
     }
     else
 	result = SASL_CONTINUE;
 
  done:
     if (ordered_mechs != NULL)
-        c_conn->cparams->utils->free(ordered_mechs);
+	c_conn->cparams->utils->free(ordered_mechs);
     RETURN(conn, result);
 }
 
 /* do a single authentication step.
  *  serverin    -- the server message received by the client, MUST have a NUL
- *                 sentinel, not counted by serverinlen
+ *		 sentinel, not counted by serverinlen
  * output:
  *  prompt_need -- on SASL_INTERACT, list of prompts needed to continue
  *  clientout   -- the client response to send to the server
  *
  * returns:
- *  SASL_OK        -- success
+ *  SASL_OK	-- success
  *  SASL_INTERACT  -- user interaction needed to fill in prompt_need list
  *  SASL_BADPROT   -- server protocol incorrect/cancelled
  *  SASL_BADSERV   -- server failed mutual auth
@@ -1058,7 +1058,7 @@ int sasl_client_plugin_info (
 		m = m->next;
 	    }
 	} else {
-            mech_list = strdup (c_mech_list);
+	    mech_list = strdup (c_mech_list);
 
 	    cur_mech = mech_list;
 
@@ -1084,7 +1084,7 @@ int sasl_client_plugin_info (
 		cur_mech = p;
 	    }
 
-            free (mech_list);
+	    free (mech_list);
 	}
 
 	info_cb (NULL, SASL_INFO_LIST_END, info_cb_rock);

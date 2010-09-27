@@ -272,18 +272,18 @@ static void client_dispose(sasl_conn_t *pconn)
  *  service       -- registered name of the service using SASL (e.g. "imap")
  *  serverFQDN    -- the fully qualified domain name of the server
  *  iplocalport   -- client IPv4/IPv6 domain literal string with port
- *		    (if NULL, then mechanisms requiring IPaddr are disabled)
+ *                    (if NULL, then mechanisms requiring IPaddr are disabled)
  *  ipremoteport  -- server IPv4/IPv6 domain literal string with port
- *		    (if NULL, then mechanisms requiring IPaddr are disabled)
+ *                    (if NULL, then mechanisms requiring IPaddr are disabled)
  *  prompt_supp   -- list of client interactions supported
- *		   may also include sasl_getopt_t context & call
- *		   NULL prompt_supp = user/pass via SASL_INTERACT only
- *		   NULL proc = interaction supported via SASL_INTERACT
+ *                   may also include sasl_getopt_t context & call
+ *                   NULL prompt_supp = user/pass via SASL_INTERACT only
+ *                   NULL proc = interaction supported via SASL_INTERACT
  *  secflags      -- security flags (see above)
  * in/out:
- *  pconn	 -- connection negotiation structure
- *		   pointer to NULL => allocate new
- *		   non-NULL => recycle storage and go for next available mech
+ *  pconn         -- connection negotiation structure
+ *                   pointer to NULL => allocate new
+ *                   non-NULL => recycle storage and go for next available mech
  *
  * Returns:
  *  SASL_OK       -- success

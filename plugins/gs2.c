@@ -156,7 +156,8 @@ static int gs2_make_message(context_t *text,
 static int gs2_get_mech_attrs(const sasl_utils_t *utils,
                               const gss_OID mech,
                               unsigned int *security_flags,
-                              unsigned int *features);
+                              unsigned int *features,
+                              const unsigned long **prompts);
 
 static int gs2_indicate_mechs(const sasl_utils_t *utils);
 
@@ -628,7 +629,8 @@ gs2_server_plug_alloc(const sasl_utils_t *utils,
 
     ret = gs2_get_mech_attrs(utils, mech,
                              &splug->security_flags,
-                             &splug->features);
+                             &splug->features,
+                             NULL);
     if (ret != SASL_OK)
         return ret;
 
@@ -928,10 +930,6 @@ static int gs2_client_mech_new(void *glob_context,
     return SASL_OK;
 }
 
-static const unsigned long gs2_required_prompts[] = {
-    SASL_CB_LIST_END
-};
-
 static int
 gs2_client_plug_alloc(const sasl_utils_t *utils,
                       void *plug,
@@ -946,7 +944,8 @@ gs2_client_plug_alloc(const sasl_utils_t *utils,
 
     ret = gs2_get_mech_attrs(utils, mech,
                              &cplug->security_flags,
-                             &cplug->features);
+                             &cplug->features,
+                             &cplug->required_prompts);
     if (ret != SASL_OK)
         return ret;
 
@@ -961,7 +960,6 @@ gs2_client_plug_alloc(const sasl_utils_t *utils,
     cplug->mech_step = gs2_client_mech_step;
     cplug->mech_dispose = gs2_common_mech_dispose;
     cplug->mech_free = gs2_common_mech_free;
-    cplug->required_prompts = gs2_required_prompts;
 
     return SASL_OK;
 }
@@ -1318,6 +1316,10 @@ gs2_make_message(context_t *text,
     return SASL_OK;
 }
 
+static const unsigned long gs2_required_prompts[] = {
+    SASL_CB_LIST_END
+};
+
 /*
  * Map GSS mechanism attributes to SASL ones
  */
@@ -1325,10 +1327,11 @@ static int
 gs2_get_mech_attrs(const sasl_utils_t *utils,
                    const gss_OID mech,
                    unsigned int *security_flags,
-                   unsigned int *features)
+                   unsigned int *features,
+                   const unsigned long **prompts)
 {
     OM_uint32 major, minor;
-    int present, ret;
+    int present;
     gss_OID_set attrs = GSS_C_NO_OID_SET;
 
     major = gss_inquire_attrs_for_mech(&minor, mech, &attrs, NULL);
@@ -1340,12 +1343,12 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
 
     *security_flags = SASL_SEC_NOPLAINTEXT | SASL_SEC_NOACTIVE;
     *features = SASL_FEAT_WANT_CLIENT_FIRST | SASL_FEAT_CHANNEL_BINDING;
+    if (prompts != NULL)
+        *prompts = gs2_required_prompts;
 
 #define MA_PRESENT(a)   (gss_test_oid_set_member(&minor, (gss_OID)(a), \
                                                  attrs, &present) == GSS_S_COMPLETE && \
                          present)
-
-    ret = SASL_OK;
 
     if (MA_PRESENT(GSS_C_MA_PFS))
         *security_flags |= SASL_SEC_FORWARD_SECRECY;
@@ -1355,11 +1358,14 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
         *security_flags |= SASL_SEC_PASS_CREDENTIALS;
     if (MA_PRESENT(GSS_C_MA_AUTH_TARG))
         *security_flags |= SASL_SEC_MUTUAL_AUTH;
+    if (MA_PRESENT(GSS_C_MA_AUTH_INIT_INIT) && prompts != NULL)
+        *prompts = NULL;
     if (MA_PRESENT(GSS_C_MA_ITOK_FRAMED))
         *features |= SASL_FEAT_GSS_FRAMING;
 
     gss_release_oid_set(&minor, &attrs);
-    return ret;
+
+    return SASL_OK;
 }
 
 /*

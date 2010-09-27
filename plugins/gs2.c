@@ -1490,6 +1490,8 @@ gs2_escape_authzid(const sasl_utils_t *utils,
     return SASL_OK;
 }
 
+#define GOT_CREDS(text, params) ((text)->client_creds != NULL || (params)->gss_creds != NULL)
+
 static int
 gs2_ask_user_info(context_t *text,
                   sasl_client_params_t *params,
@@ -1504,41 +1506,104 @@ gs2_ask_user_info(context_t *text,
     int auth_result = SASL_OK;
     int pass_result = SASL_OK;
     OM_uint32 maj_stat, min_stat;
-    gss_buffer_desc authid_buf = GSS_C_EMPTY_BUFFER;
     gss_OID_set_desc mechs;
-
-    /* try to get the authid */
-    if (oparams->authid == NULL) {
-        auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
-        if (auth_result != SASL_OK && auth_result != SASL_INTERACT) 
-            return auth_result;
-    }
-
-    /* try to get the userid */
-    if (oparams->user == NULL) {
-        user_result = _plug_get_userid(params->utils, &userid, prompt_need);
-
-        if (user_result != SASL_OK && user_result != SASL_INTERACT)
-            return user_result;
-    }
+    gss_buffer_desc cred_authid = GSS_C_EMPTY_BUFFER;
 
     mechs.count = 1;
     mechs.elements = (gss_OID)text->mechanism;
 
-    if (authid != NULL) {
-        authid_buf.length = strlen(authid);
-        authid_buf.value = (void *)authid;
+    /*
+     * Determine the authentication identity from the application supplied
+     * GSS credential, the default GSS credential, and the application
+     * supplied identity, in that order.
+     */
+    if (oparams->authid == NULL) {
+        assert(text->client_name == GSS_C_NO_NAME);
+
+        if (!GOT_CREDS(text, params)) {
+            maj_stat = gss_acquire_cred(&min_stat,
+                                        GSS_C_NO_NAME,
+                                        GSS_C_INDEFINITE,
+                                        &mechs,
+                                        GSS_C_INITIATE,
+                                        &text->client_creds,
+                                        NULL,
+                                        &text->lifetime);
+        } else
+            maj_stat = GSS_S_COMPLETE;
+
+        if (maj_stat == GSS_S_COMPLETE) {
+            maj_stat = gss_inquire_cred(&min_stat,
+                                        params->gss_creds
+                                            ? (gss_cred_id_t)params->gss_creds
+                                            : text->client_creds,
+                                        &text->client_name,
+                                        NULL,
+                                        NULL,
+                                        NULL);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+        } else if (maj_stat != GSS_S_CRED_UNAVAIL)
+            goto cleanup;
+
+        if (text->client_name != GSS_C_NO_NAME) {
+            maj_stat = gss_display_name(&min_stat,
+                                        text->client_name,
+                                        &cred_authid,
+                                        NULL);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+
+            authid = cred_authid.value;
+        } else {
+            auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
+            if (auth_result != SASL_OK && auth_result != SASL_INTERACT) {
+                result = auth_result;
+                goto cleanup;
+            }
+        }
     }
 
-    if (params->gss_creds == GSS_C_NO_CREDENTIAL && authid != NULL) {
-        maj_stat = gss_import_name(&min_stat, &authid_buf,
-                                   GSS_C_NT_USER_NAME, &text->client_name);
-        if (GSS_ERROR(maj_stat)) {
-            sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-            return SASL_FAIL;
+    /*
+     * If the application has provided an authentication identity, parse it.
+     */
+    if (text->client_name == GSS_C_NO_NAME) {
+        gss_buffer_desc name_buf;
+
+        if (oparams->authid != NULL) {
+            name_buf.length = strlen(oparams->authid);
+            name_buf.value = (void *)oparams->authid;
+        } else {
+            name_buf.length = strlen(authid);
+            name_buf.value = (void *)authid;
         }
 
-        /* See if we have a default credential */
+        if (name_buf.value != NULL) {
+            maj_stat = gss_import_name(&min_stat,
+                                       &name_buf,
+                                       GSS_C_NT_USER_NAME,
+                                       &text->client_name);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+        }
+    }
+
+    /*
+     * Get the authorization identity.
+     */
+    if (oparams->user == NULL) {
+        user_result = _plug_get_userid(params->utils, &userid, prompt_need);
+        if (user_result != SASL_OK && user_result != SASL_INTERACT) {
+            result = user_result;
+            goto cleanup;
+        }
+    }
+
+    /*
+     * Armed with the authentication identity, try to get a credential without
+     * a password.
+     */
+    if (!GOT_CREDS(text, params) && text->client_name != GSS_C_NO_NAME) {
         maj_stat = gss_acquire_cred(&min_stat,
                                     text->client_name,
                                     GSS_C_INDEFINITE,
@@ -1547,22 +1612,24 @@ gs2_ask_user_info(context_t *text,
                                     &text->client_creds,
                                     NULL,
                                     &text->lifetime);
-        if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CRED_UNAVAIL) {
-            sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-            return SASL_FAIL;
-        }
+        if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CRED_UNAVAIL)
+            goto cleanup;
     }
 
-    /* try to get the password, only if necessary */
-    if (text->password == NULL &&
-        params->gss_creds == GSS_C_NO_CREDENTIAL &&
-        text->client_creds == GSS_C_NO_CREDENTIAL) {
-        pass_result = _plug_get_password(params->utils, &text->password,
-                                         &text->free_password, prompt_need);
-        if (pass_result != SASL_OK && pass_result != SASL_INTERACT)
-            return pass_result;
+    /*
+     * If that failed, try to get a credential with a password.
+     */
+    if (!GOT_CREDS(text, params)) {
+        if (text->password == NULL) {
+            pass_result = _plug_get_password(params->utils, &text->password,
+                                             &text->free_password, prompt_need);
+            if (pass_result != SASL_OK && pass_result != SASL_INTERACT) {
+                result = pass_result;
+                goto cleanup;
+            }
+        }
 
-        if (text->password != NULL && text->password->len != 0) {
+        if (text->password != NULL) {
             gss_buffer_desc password_buf;
 
             password_buf.length = text->password->len;
@@ -1577,12 +1644,12 @@ gs2_ask_user_info(context_t *text,
                                                       &text->client_creds,
                                                       NULL,
                                                       &text->lifetime);
-            if (GSS_ERROR(maj_stat)) {
-                sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-                return SASL_FAIL;
-            }
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
         }
     }
+
+    maj_stat = GSS_S_COMPLETE;
 
     /* free prompts we got */
     if (prompt_need && *prompt_need) {
@@ -1593,7 +1660,6 @@ gs2_ask_user_info(context_t *text,
     /* if there are prompts not filled in */
     if (user_result == SASL_INTERACT || auth_result == SASL_INTERACT ||
         pass_result == SASL_INTERACT) {
-
         /* make the prompt list */
         result =
             _plug_make_prompts(params->utils, prompt_need,
@@ -1609,12 +1675,8 @@ gs2_ask_user_info(context_t *text,
                                NULL,
                                NULL, NULL);
         if (result == SASL_OK)
-            return SASL_INTERACT;
-
-        return result;
-    }
-
-    if (oparams->authid == NULL) {
+            result = SASL_INTERACT;
+    } else if (oparams->authid == NULL) {
         if (userid == NULL || userid[0] == '\0') {
             result = params->canon_user(params->utils->conn, authid, 0,
                                         SASL_CU_AUTHID | SASL_CU_AUTHZID,
@@ -1623,14 +1685,22 @@ gs2_ask_user_info(context_t *text,
             result = params->canon_user(params->utils->conn,
                                         authid, 0, SASL_CU_AUTHID, oparams);
             if (result != SASL_OK)
-                return result;
+                goto cleanup;
 
             result = params->canon_user(params->utils->conn,
                                         userid, 0, SASL_CU_AUTHZID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
         }
-        if (result != SASL_OK)
-            return result;
     }
+
+cleanup:
+    if (result == SASL_OK && maj_stat != GSS_S_COMPLETE) {
+        sasl_gs2_seterror(text->utils, maj_stat, min_stat);
+        result = SASL_FAIL;
+    }
+
+    gss_release_buffer(&min_stat, &cred_authid);
 
     return result;
 }

@@ -1571,6 +1571,10 @@ gs2_get_init_creds(context_t *text,
         }
     }
 
+    /*
+     * Canonicalize the authentication and authorization identities before
+     * calling GSS_Import_name.
+     */
     if (auth_result == SASL_OK && user_result == SASL_OK &&
         oparams->authid == NULL) {
         if (userid == NULL || userid[0] == '\0') {

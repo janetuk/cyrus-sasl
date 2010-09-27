@@ -706,7 +706,6 @@ static int gs2_client_mech_step(void *conn_context,
         if (ret != SASL_OK)
             goto cleanup;
 
-
         initialContextToken = 1;
     } else
         initialContextToken = 0;

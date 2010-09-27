@@ -120,7 +120,7 @@ typedef struct context {
     gss_OID mechanism;
     int gs2_flags;
     char *cbindingname;
-    struct gss_channel_bindings_struct bindings;
+    struct gss_channel_bindings_struct gss_cbindings;
     sasl_secret_t *password;
     unsigned int free_password;
     OM_uint32 lifetime;
@@ -250,7 +250,7 @@ sasl_gs2_free_context_contents(context_t *text)
         text->mechanism = GSS_C_NO_OID;
     }
 
-    gss_release_buffer(&min_stat, &text->bindings.application_data);
+    gss_release_buffer(&min_stat, &text->gss_cbindings.application_data);
 
     if (text->out_buf != NULL) {
         text->utils->free(text->out_buf);
@@ -415,7 +415,7 @@ gs2_server_mech_step(void *conn_context,
                                         ? (gss_cred_id_t)params->gss_creds
                                         : text->server_creds,
                                       &input_token,
-                                      &text->bindings,
+                                      &text->gss_cbindings,
                                       &text->client_name,
                                       &actual_mech,
                                       &output_token,
@@ -828,7 +828,7 @@ static int gs2_client_mech_step(void *conn_context,
                                     (gss_OID)text->mechanism,
                                     req_flags,
                                     GSS_C_INDEFINITE,
-                                    &text->bindings,
+                                    &text->gss_cbindings,
                                     serverinlen ? &input_token : GSS_C_NO_BUFFER,
                                     NULL,
                                     &output_token,
@@ -1018,11 +1018,11 @@ gs2_save_cbindings(context_t *text,
                    gss_buffer_t header,
                    const sasl_channel_binding_t *cbinding)
 {
-    gss_buffer_t gss_bindings = &text->bindings.application_data;
+    gss_buffer_t gss_cbindings = &text->gss_cbindings.application_data;
     size_t len;
     unsigned char *p;
 
-    assert(gss_bindings->value == NULL);
+    assert(gss_cbindings->value == NULL);
 
     /*
      * The application-data field MUST be set to the gs2-header, excluding
@@ -1039,12 +1039,12 @@ gs2_save_cbindings(context_t *text,
         len += cbinding->len;
     }
 
-    gss_bindings->length = len;
-    gss_bindings->value = text->utils->malloc(len);
-    if (gss_bindings->value == NULL)
+    gss_cbindings->length = len;
+    gss_cbindings->value = text->utils->malloc(len);
+    if (gss_cbindings->value == NULL)
         return SASL_NOMEM;
 
-    p = (unsigned char *)gss_bindings->value;
+    p = (unsigned char *)gss_cbindings->value;
     if (text->gs2_flags & GS2_NONSTD_FLAG) {
         memcpy(p, (unsigned char *)header->value + 2, header->length - 2);
         p += header->length - 2;

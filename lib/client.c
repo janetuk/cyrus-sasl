@@ -555,6 +555,11 @@ int sasl_client_start(sasl_conn_t *conn,
 	    }
 
 	    /* Can we meet it's features? */
+            if (SASL_CB_PRESENT(c_conn->cparams) &&
+                !(m->m.plug->features & SASL_FEAT_CHANNEL_BINDING)) {
+                break;
+            }
+
 	    if ((m->m.plug->features & SASL_FEAT_NEEDSERVERFQDN)
 		&& !conn->serverFQDN) {
 		break;

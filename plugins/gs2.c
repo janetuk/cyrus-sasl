@@ -1,8 +1,43 @@
 /*
- * Copyright 2010 PADL Software Pty Ltd. All rights reserved.
+ * Copyright (c) 2010 PADL Software Pty Ltd.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Redistributions in any form must be accompanied by information on
+ *    how to obtain complete source code for the GS2 software and any
+ *    accompanying software that uses the GS2 software. The source code
+ *    must either be included in the distribution or be available for no
+ *    more than the cost of distribution plus a nominal fee, and must be
+ *    freely redistributable under reasonable conditions. For an
+ *    executable file, complete source code means the source code for all
+ *    modules it contains. It does not include source code for modules or
+ *    files that typically accompany the major components of the operating
+ *    system on which the executable file runs.
+ *
+ * THIS SOFTWARE IS PROVIDED BY PADL SOFTWARE ``AS IS'' AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+ * NON-INFRINGEMENT, ARE DISCLAIMED. IN NO EVENT SHALL PADL SOFTWARE
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * Portions Copyright (c) 1998-2003 Carnegie Mellon University.
+ * Copyright (c) 1998-2003 Carnegie Mellon University.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,9 +97,9 @@
 #include "gs2_token.h"
 
 #define GS2_CB_FLAG_MASK    0x0F
+#define GS2_CB_FLAG_N       0x00
 #define GS2_CB_FLAG_P       0x01
-#define GS2_CB_FLAG_N       0x02
-#define GS2_CB_FLAG_Y       0x03
+#define GS2_CB_FLAG_Y       0x02
 #define GS2_NONSTD_FLAG     0x10
 
 typedef struct context {
@@ -84,7 +119,7 @@ typedef struct context {
     } plug;
     gss_OID mechanism;
     int gs2_flags;
-    char *cb_name;
+    char *cbindingname;
     struct gss_channel_bindings_struct bindings;
     sasl_secret_t *password;
     unsigned int free_password;
@@ -224,9 +259,9 @@ sasl_gs2_free_context_contents(context_t *text)
 
     text->out_buf_len = 0;
 
-    if (text->cb_name != NULL) {
-        text->utils->free(text->cb_name);
-        text->cb_name = NULL;
+    if (text->cbindingname != NULL) {
+        text->utils->free(text->cbindingname);
+        text->cbindingname = NULL;
     }
 
     if (text->free_password)
@@ -377,7 +412,7 @@ gs2_server_mech_step(void *conn_context,
     maj_stat = gss_accept_sec_context(&min_stat,
                                       &text->gss_ctx,
                                       (params->gss_creds != GSS_C_NO_CREDENTIAL)
-                                        ? params->gss_creds
+                                        ? (gss_cred_id_t)params->gss_creds
                                         : text->server_creds,
                                       &input_token,
                                       &text->bindings,
@@ -481,13 +516,14 @@ gs2_server_mech_step(void *conn_context,
 
     switch (text->gs2_flags & GS2_CB_FLAG_MASK) {
     case GS2_CB_FLAG_N:
-        oparams->chanbindingflag = SASL_CB_FLAG_NONE;
+        oparams->cbindingdisp = SASL_CB_DISP_NONE;
         break;
     case GS2_CB_FLAG_P:
-        oparams->chanbindingflag = SASL_CB_FLAG_USED;
+        oparams->cbindingdisp = SASL_CB_DISP_USED;
+        oparams->cbindingname = text->cbindingname;
         break;
     case GS2_CB_FLAG_Y:
-        oparams->chanbindingflag = SASL_CB_FLAG_WANT;
+        oparams->cbindingdisp = SASL_CB_DISP_WANT;
         break;
     }
 
@@ -681,7 +717,7 @@ static int gs2_client_mech_step(void *conn_context,
         if (ret != SASL_OK)
             goto cleanup;
 
-        if (params->gss_creds == GSS_C_NO_CREDENTIAL && 
+        if (params->gss_creds == GSS_C_NO_CREDENTIAL &&
             text->password != NULL && text->password->len != 0) {
             gss_buffer_desc password_buf;
             gss_buffer_desc name_buf;
@@ -761,14 +797,14 @@ static int gs2_client_mech_step(void *conn_context,
         if ((text->plug.client->features & SASL_FEAT_GSS_FRAMING) == 0)
             text->gs2_flags |= GS2_NONSTD_FLAG;
 
-        switch (params->chanbindingflag) {
-        case SASL_CB_FLAG_NONE:
+        switch (params->cbindingdisp) {
+        case SASL_CB_DISP_NONE:
             text->gs2_flags |= GS2_CB_FLAG_N;
             break;
-        case SASL_CB_FLAG_USED:
+        case SASL_CB_DISP_USED:
             text->gs2_flags |= GS2_CB_FLAG_P;
             break;
-        case SASL_CB_FLAG_WANT:
+        case SASL_CB_DISP_WANT:
             text->gs2_flags |= GS2_CB_FLAG_Y;
             break;
         }
@@ -785,7 +821,7 @@ static int gs2_client_mech_step(void *conn_context,
 
     maj_stat = gss_init_sec_context(&min_stat,
                                     (params->gss_creds != GSS_C_NO_CREDENTIAL)
-                                        ? params->gss_creds
+                                        ? (gss_cred_id_t)params->gss_creds
                                         : text->client_creds,
                                     &text->gss_ctx,
                                     text->server_name,
@@ -892,7 +928,7 @@ static int gs2_client_mech_new(void *glob_context,
     if (ret != SASL_OK) {
         gs2_common_mech_dispose(text, params->utils);
         return ret;
-    } 
+    }
 
     *conn_context = text;
 
@@ -980,8 +1016,7 @@ gs2_client_plug_init(const sasl_utils_t *utils,
 static int
 gs2_save_cbindings(context_t *text,
                    gss_buffer_t header,
-                   const char *chanbindingdata,
-                   unsigned int chanbindinglen)
+                   const sasl_channel_binding_t *cbinding)
 {
     gss_buffer_t gss_bindings = &text->bindings.application_data;
     size_t len;
@@ -999,8 +1034,10 @@ gs2_save_cbindings(context_t *text,
         assert(len > 2);
         len -= 2;
     }
-    if ((text->gs2_flags & GS2_CB_FLAG_MASK) == GS2_CB_FLAG_P)
-        len += chanbindinglen;
+    if ((text->gs2_flags & GS2_CB_FLAG_MASK) == GS2_CB_FLAG_P &&
+        cbinding != NULL) {
+        len += cbinding->len;
+    }
 
     gss_bindings->length = len;
     gss_bindings->value = text->utils->malloc(len);
@@ -1017,8 +1054,8 @@ gs2_save_cbindings(context_t *text,
     }
 
     if ((text->gs2_flags & GS2_CB_FLAG_MASK) == GS2_CB_FLAG_P &&
-        chanbindinglen != 0) {
-        memcpy(p, chanbindingdata, chanbindinglen);
+        cbinding != NULL) {
+        memcpy(p, cbinding->data, cbinding->len);
     }
 
     return SASL_OK;
@@ -1041,7 +1078,7 @@ gs2_verify_initial_message(context_t *text,
     int ret;
     gss_buffer_desc buf = GSS_C_EMPTY_BUFFER;
 
-    assert(text->cb_name == NULL);
+    assert(text->cbindingname == NULL);
     assert(text->authzid == NULL);
 
     token->length = 0;
@@ -1067,7 +1104,7 @@ gs2_verify_initial_message(context_t *text,
         if (*p++ != '=')
             return SASL_BADAUTH;
 
-        ret = gs2_unescape_authzid(text->utils, &p, &remain, &text->cb_name);
+        ret = gs2_unescape_authzid(text->utils, &p, &remain, &text->cbindingname);
         if (ret != SASL_OK)
             return ret;
 
@@ -1097,7 +1134,7 @@ gs2_verify_initial_message(context_t *text,
             return ret;
     }
 
-    /* end of header */ 
+    /* end of header */
     CHECK_REMAIN(1); /* , */
     remain--;
     if (*p++ != ',')
@@ -1107,8 +1144,7 @@ gs2_verify_initial_message(context_t *text,
     buf.value = (void *)in;
 
     /* stash channel bindings to pass into gss_accept_sec_context() */
-    ret = gs2_save_cbindings(text, &buf, sparams->chanbindingdata,
-                             sparams->chanbindinglen);
+    ret = gs2_save_cbindings(text, &buf, sparams->cbinding);
     if (ret != SASL_OK)
         return ret;
 
@@ -1125,7 +1161,7 @@ gs2_verify_initial_message(context_t *text,
     } else {
         unsigned int token_size;
 
-        /* create a properly formed GSS token */ 
+        /* create a properly formed GSS token */
         token_size = gs2_token_size(text->mechanism, buf.length);
         token->value = text->utils->malloc(token_size);
         if (token->value == NULL)
@@ -1153,7 +1189,7 @@ gs2_make_header(context_t *text,
                 unsigned *outlen)
 {
     size_t required = 0;
-    size_t wire_authzid_len = 0, cb_name_len = 0;
+    size_t wire_authzid_len = 0, cbnamelen = 0;
     char *wire_authzid = NULL;
     char *p;
     int ret;
@@ -1169,10 +1205,10 @@ gs2_make_header(context_t *text,
     /* SASL channel bindings */
     switch (text->gs2_flags & GS2_CB_FLAG_MASK) {
     case GS2_CB_FLAG_P:
-        if (cparams->chanbindingtype == NULL)
+        if (!SASL_CB_PRESENT(cparams))
             return SASL_BADPARAM;
-        cb_name_len = strlen(cparams->chanbindingtype);
-        required += 1 /*=*/ + cb_name_len;
+        cbnamelen = strlen(cparams->cbinding->name);
+        required += 1 /*=*/ + cbnamelen;
         /* fallthrough */
     case GS2_CB_FLAG_N:
     case GS2_CB_FLAG_Y:
@@ -1212,8 +1248,8 @@ gs2_make_header(context_t *text,
     switch (text->gs2_flags & GS2_CB_FLAG_MASK) {
     case GS2_CB_FLAG_P:
         memcpy(p, "p=", 2);
-        memcpy(p + 2, cparams->chanbindingtype, cb_name_len);
-        p += 2 + cb_name_len;
+        memcpy(p + 2, cparams->cbinding->name, cbnamelen);
+        p += 2 + cbnamelen;
         break;
     case GS2_CB_FLAG_N:
         *p++ = 'n';
@@ -1236,10 +1272,11 @@ gs2_make_header(context_t *text,
     buf.length = required;
     buf.value = *out;
 
-    ret = gs2_save_cbindings(text, &buf, cparams->chanbindingdata,
-                             cparams->chanbindinglen);
+    ret = gs2_save_cbindings(text, &buf, cparams->cbinding);
+    if (ret != SASL_OK)
+        return ret;
 
-    return ret;
+    return SASL_OK;
 }
 
 /*

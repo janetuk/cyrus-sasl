@@ -8,3 +8,5 @@ More information at:
     http://k5wiki.kerberos.org/wiki/Projects/GS2
 
 Please e-mail lukeh@padl.com with any bug reports.
+
+Note: the file plugins/gs2.c is licensed under the Sleepycat license.

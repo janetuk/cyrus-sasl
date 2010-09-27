@@ -1673,6 +1673,10 @@ gs2_get_init_creds(context_t *text,
         if (result == SASL_OK)
             result = SASL_INTERACT;
     } else if (oparams->authid == NULL) {
+        /*
+         * XXX we acquired GSS credentials pre-canonicalisation. Just noting
+         * this might cause some problems with applications.
+         */
         if (userid == NULL || userid[0] == '\0') {
             result = params->canon_user(params->utils->conn, authid, 0,
                                         SASL_CU_AUTHID | SASL_CU_AUTHZID,

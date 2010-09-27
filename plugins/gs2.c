@@ -1711,7 +1711,7 @@ sasl_gs2_seterror_(const sasl_utils_t *utils, OM_uint32 maj, OM_uint32 min,
     int ret;
     char *out = NULL;
     unsigned int len, curlen = 0;
-    const char prefix[] = "GSSAPI Error: ";
+    const char prefix[] = "GS2 Error: ";
 
     len = sizeof(prefix);
     ret = _plug_buf_alloc(utils, &out, &curlen, 256);

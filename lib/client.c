@@ -409,13 +409,17 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 			 int *server_can_cb)
 {
     char *list, *listp;
-    size_t i;
-    const char *p, *start  = NULL;
+    size_t i, mechslen, start;
 
     *count = 0;
     *server_can_cb = 0;
 
-    listp = list = utils->malloc(strlen(mechs) + 1);
+    if (mechs == NULL || mechs[0] == '\0')
+        return SASL_NOMECH;
+
+    mechslen = strlen(mechs);
+
+    listp = list = utils->malloc(mechslen + 1);
     if (list == NULL)
 	return SASL_NOMEM;
 
@@ -429,22 +433,21 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
      */
 #define ismechchar(c)   (isalnum((c)) || (c) == '_' || (c) == '-')
     do {
-	for (start = p = mechs, i = 0; *p != '\0'; p++) {
-	    if (!ismechchar(*p) || p[1] == '\0') {
-		size_t len = p - start;
+        for (i = start = 0; i <= mechslen; i++) {
+	    if (!ismechchar(mechs[i])) {
+                const char *mechp = &mechs[start];
+		size_t len = i - start;
 
-		if (p[1] == '\0')
-		    len++;
-
-		if (_mech_plus_p(start, len) == has_cb_data) {
-		    memcpy(listp, start, len);
+		if (len != 0 &&
+                    _mech_plus_p(mechp, len) == has_cb_data) {
+		    memcpy(listp, mechp, len);
 		    listp[len] = '\0';
 		    listp += len + 1;
 		    (*count)++;
 		    if (*server_can_cb == 0 && has_cb_data)
 			*server_can_cb = 1;
 		}
-		start = p + 1;
+		start = ++i;
 	    }
 	}
 	if (has_cb_data)
@@ -453,7 +456,6 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 	    break;
     } while (1);
 
-    *listp = '\0';
     *ordered_mechs = list;
 
     return SASL_OK;

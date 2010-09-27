@@ -1595,7 +1595,8 @@ gs2_get_init_creds(context_t *text,
     /*
      * If the application has provided an authentication identity, parse it.
      */
-    if (text->client_name == GSS_C_NO_NAME && oparams->authid != NULL) {
+    if (text->client_name == GSS_C_NO_NAME &&
+        oparams->authid != NULL && oparams->authid[0] != '\0') {
         gss_buffer_desc name_buf;
 
         name_buf.length = strlen(oparams->authid);

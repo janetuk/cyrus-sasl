@@ -245,10 +245,12 @@ sasl_gs2_free_context_contents(context_t *text)
         text->authzid = NULL;
     }
 
+#if 0
     if (text->mechanism != NULL) {
         gss_release_oid(&min_stat, &text->mechanism);
         text->mechanism = GSS_C_NO_OID;
     }
+#endif
 
     gss_release_buffer(&min_stat, &text->gss_cbindings.application_data);
 

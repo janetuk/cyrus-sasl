@@ -707,40 +707,6 @@ static int gs2_client_mech_step(void *conn_context,
         if (ret != SASL_OK)
             goto cleanup;
 
-        if (params->gss_creds == GSS_C_NO_CREDENTIAL &&
-            text->password != NULL && text->password->len != 0) {
-            gss_buffer_desc password_buf;
-            gss_buffer_desc name_buf;
-            gss_OID_set_desc mechs;
-
-            name_buf.length = strlen(oparams->authid);
-            name_buf.value = (void *)oparams->authid;
-
-            password_buf.length = text->password->len;
-            password_buf.value = text->password->data;
-
-            mechs.count = 1;
-            mechs.elements = (gss_OID)text->mechanism;
-
-            maj_stat = gss_import_name(&min_stat,
-                                       &name_buf,
-                                       GSS_C_NT_USER_NAME,
-                                       &text->client_name);
-            if (GSS_ERROR(maj_stat))
-                goto cleanup;
-
-            maj_stat = gss_acquire_cred_with_password(&min_stat,
-                                                      text->client_name,
-                                                      &password_buf,
-                                                      GSS_C_INDEFINITE,
-                                                      &mechs,
-                                                      GSS_C_INITIATE,
-                                                      &text->client_creds,
-                                                      NULL,
-                                                      &text->lifetime);
-            if (GSS_ERROR(maj_stat))
-                goto cleanup;
-        }
 
         initialContextToken = 1;
     } else
@@ -1537,31 +1503,84 @@ gs2_ask_user_info(context_t *text,
     int user_result = SASL_OK;
     int auth_result = SASL_OK;
     int pass_result = SASL_OK;
+    OM_uint32 maj_stat, min_stat;
+    gss_buffer_desc authid_buf = GSS_C_EMPTY_BUFFER;
+    gss_OID_set_desc mechs;
 
     /* try to get the authid */
     if (oparams->authid == NULL) {
         auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
-
-        if (auth_result != SASL_OK && auth_result != SASL_INTERACT) {
+        if (auth_result != SASL_OK && auth_result != SASL_INTERACT) 
             return auth_result;
-        }
     }
 
     /* try to get the userid */
     if (oparams->user == NULL) {
         user_result = _plug_get_userid(params->utils, &userid, prompt_need);
 
-        if (user_result != SASL_OK && user_result != SASL_INTERACT) {
+        if (user_result != SASL_OK && user_result != SASL_INTERACT)
             return user_result;
+    }
+
+    mechs.count = 1;
+    mechs.elements = (gss_OID)text->mechanism;
+
+    if (authid != NULL) {
+        authid_buf.length = strlen(authid);
+        authid_buf.value = (void *)authid;
+    }
+
+    if (params->gss_creds == GSS_C_NO_CREDENTIAL && authid != NULL) {
+        maj_stat = gss_import_name(&min_stat, &authid_buf,
+                                   GSS_C_NT_USER_NAME, &text->client_name);
+        if (GSS_ERROR(maj_stat)) {
+            sasl_gs2_seterror(text->utils, maj_stat, min_stat);
+            return SASL_FAIL;
+        }
+
+        /* See if we have a default credential */
+        maj_stat = gss_acquire_cred(&min_stat,
+                                    text->client_name,
+                                    GSS_C_INDEFINITE,
+                                    &mechs,
+                                    GSS_C_INITIATE,
+                                    &text->client_creds,
+                                    NULL,
+                                    &text->lifetime);
+        if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CRED_UNAVAIL) {
+            sasl_gs2_seterror(text->utils, maj_stat, min_stat);
+            return SASL_FAIL;
         }
     }
 
-    /* try to get the password */
-    if (text->password == NULL) {
+    /* try to get the password, only if necessary */
+    if (text->password == NULL &&
+        params->gss_creds == GSS_C_NO_CREDENTIAL &&
+        text->client_creds == GSS_C_NO_CREDENTIAL) {
         pass_result = _plug_get_password(params->utils, &text->password,
                                          &text->free_password, prompt_need);
-        if (pass_result != SASL_OK && pass_result != SASL_INTERACT) {
+        if (pass_result != SASL_OK && pass_result != SASL_INTERACT)
             return pass_result;
+
+        if (text->password != NULL && text->password->len != 0) {
+            gss_buffer_desc password_buf;
+
+            password_buf.length = text->password->len;
+            password_buf.value = text->password->data;
+
+            maj_stat = gss_acquire_cred_with_password(&min_stat,
+                                                      text->client_name,
+                                                      &password_buf,
+                                                      GSS_C_INDEFINITE,
+                                                      &mechs,
+                                                      GSS_C_INITIATE,
+                                                      &text->client_creds,
+                                                      NULL,
+                                                      &text->lifetime);
+            if (GSS_ERROR(maj_stat)) {
+                sasl_gs2_seterror(text->utils, maj_stat, min_stat);
+                return SASL_FAIL;
+            }
         }
     }
 
@@ -1589,7 +1608,8 @@ gs2_ask_user_info(context_t *text,
                                NULL, NULL, NULL,
                                NULL,
                                NULL, NULL);
-        if (result == SASL_OK) return SASL_INTERACT;
+        if (result == SASL_OK)
+            return SASL_INTERACT;
 
         return result;
     }
@@ -1602,7 +1622,8 @@ gs2_ask_user_info(context_t *text,
         } else {
             result = params->canon_user(params->utils->conn,
                                         authid, 0, SASL_CU_AUTHID, oparams);
-            if (result != SASL_OK) return result;
+            if (result != SASL_OK)
+                return result;
 
             result = params->canon_user(params->utils->conn,
                                         userid, 0, SASL_CU_AUTHZID, oparams);

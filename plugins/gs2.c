@@ -128,11 +128,10 @@ typedef struct context {
 
 static gss_OID_set gs2_mechs = GSS_C_NO_OID_SET;
 
-static int gs2_ask_user_info(context_t *context,
-                             sasl_client_params_t *params,
-                             char **realms, int nrealm,
-                             sasl_interact_t **prompt_need,
-                             sasl_out_params_t *oparams);
+static int gs2_get_init_creds(context_t *context,
+                              sasl_client_params_t *params,
+                              sasl_interact_t **prompt_need,
+                              sasl_out_params_t *oparams);
 
 static int gs2_verify_initial_message(context_t *text,
                                       sasl_server_params_t *sparams,
@@ -703,7 +702,7 @@ static int gs2_client_mech_step(void *conn_context,
     *clientoutlen = 0;
 
     if (text->gss_ctx == GSS_C_NO_CONTEXT) {
-        ret = gs2_ask_user_info(text, params, NULL, 0, prompt_need, oparams);
+        ret = gs2_get_init_creds(text, params, prompt_need, oparams);
         if (ret != SASL_OK)
             goto cleanup;
 
@@ -1493,12 +1492,10 @@ gs2_escape_authzid(const sasl_utils_t *utils,
 #define GOT_CREDS(text, params) ((text)->client_creds != NULL || (params)->gss_creds != NULL)
 
 static int
-gs2_ask_user_info(context_t *text,
-                  sasl_client_params_t *params,
-                  char **realms __attribute__((unused)),
-                  int nrealm __attribute__((unused)),
-                  sasl_interact_t **prompt_need,
-                  sasl_out_params_t *oparams)
+gs2_get_init_creds(context_t *text,
+                   sasl_client_params_t *params,
+                   sasl_interact_t **prompt_need,
+                   sasl_out_params_t *oparams)
 {
     int result = SASL_OK;
     const char *authid = NULL, *userid = NULL;

@@ -419,36 +419,30 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
     if (list == NULL)
         return SASL_NOMEM;
 
-    if (has_cb_data) {
+    do {
         for (start = p = mechs, i = 0; *p != '\0'; p++) {
             if (isspace(*p) || p[1] == '\0') {
-                size_t len = p - start + 1;
+                size_t len = p - start;
 
-                if (_mech_plus_p(start, len)) {
+                if (p[1] == '\0')
+                    len++;
+
+                if (_mech_plus_p(start, len) == has_cb_data) {
                     memcpy(listp, start, len);
                     listp[len] = '\0';
                     listp += len + 1;
                     (*count)++;
-                    *server_can_cb = 1;
+                    if (*server_can_cb == 0 && has_cb_data)
+                        *server_can_cb = 1;
                 }
                 start = p + 1;
             }
         }
-    }
-
-    for (start = p = mechs, i = 0; *p != '\0'; p++) {
-        if (isspace(*p) || p[1] == '\0') {
-            size_t len = p - start + 1;
-
-            if (!_mech_plus_p(start, len)) {
-                memcpy(listp, start, len);
-                listp[len] = '\0';
-                listp += len + 1;
-                (*count)++;
-            }
-            start = p + 1;
-        }
-    }
+        if (has_cb_data)
+            has_cb_data = 0;
+        else
+            break;
+    } while (1);
 
     *listp = '\0';
     *ordered_mechs = list;

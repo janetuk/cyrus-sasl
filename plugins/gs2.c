@@ -245,13 +245,6 @@ sasl_gs2_free_context_contents(context_t *text)
         text->authzid = NULL;
     }
 
-#if 0
-    if (text->mechanism != NULL) {
-        gss_release_oid(&min_stat, &text->mechanism);
-        text->mechanism = GSS_C_NO_OID;
-    }
-#endif
-
     gss_release_buffer(&min_stat, &text->gss_cbindings.application_data);
 
     if (text->out_buf != NULL) {
@@ -551,7 +544,6 @@ cleanup:
     gss_release_buffer(&min_stat, &short_name_buf);
     gss_release_buffer(&min_stat, &output_token);
     gss_release_name(&min_stat, &without);
-    gss_release_oid(&min_stat, &actual_mech);
 
     if (ret == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
@@ -894,7 +886,6 @@ static int gs2_client_mech_step(void *conn_context,
 cleanup:
     gss_release_buffer(&min_stat, &output_token);
     gss_release_buffer(&min_stat, &name_buf);
-    gss_release_oid(&min_stat, &actual_mech);
 
     if (ret == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);

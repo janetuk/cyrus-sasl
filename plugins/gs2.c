@@ -341,7 +341,6 @@ gs2_server_mech_step(void *conn_context,
     gss_buffer_desc short_name_buf = GSS_C_EMPTY_BUFFER;
     gss_name_t without = GSS_C_NO_NAME;
     gss_OID_set_desc mechs;
-    gss_OID actual_mech = GSS_C_NO_OID;
     OM_uint32 out_flags = 0;
     int ret = 0, equal = 0;
     int initialContextToken = (text->gss_ctx == GSS_C_NO_CONTEXT);
@@ -413,7 +412,7 @@ gs2_server_mech_step(void *conn_context,
                                       &input_token,
                                       &text->gss_cbindings,
                                       &text->client_name,
-                                      &actual_mech,
+                                      NULL,
                                       &output_token,
                                       &out_flags,
                                       &text->lifetime,
@@ -447,12 +446,6 @@ gs2_server_mech_step(void *conn_context,
 
     assert(maj_stat == GSS_S_COMPLETE);
 
-#if 0
-    if (!g_OID_equal(text->mechanism, actual_mech)) {
-        ret = SASL_WRONGMECH;
-        goto cleanup;
-    }
-#endif
     if ((out_flags & GSS_C_SEQUENCE_FLAG) == 0)  {
         ret = SASL_BADAUTH;
         goto cleanup;
@@ -703,7 +696,6 @@ static int gs2_client_mech_step(void *conn_context,
     gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
     OM_uint32 maj_stat = GSS_S_FAILURE, min_stat = 0;
     OM_uint32 req_flags, ret_flags;
-    gss_OID actual_mech = GSS_C_NO_OID;
     int ret = SASL_FAIL;
     int initialContextToken;
 
@@ -856,17 +848,13 @@ static int gs2_client_mech_step(void *conn_context,
                                    &text->client_name,
                                    NULL,
                                    &text->lifetime,
-                                   &actual_mech,
+                                   NULL,
                                    &ret_flags, /* flags */
                                    NULL,
                                    NULL);
     if (GSS_ERROR(maj_stat))
         goto cleanup;
 
-    if (!g_OID_equal(text->mechanism, actual_mech)) {
-        ret = SASL_WRONGMECH;
-        goto cleanup;
-    }
     if ((ret_flags & req_flags) != req_flags) {
         maj_stat = SASL_BADAUTH;
         goto cleanup;

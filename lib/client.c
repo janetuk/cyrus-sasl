@@ -618,8 +618,11 @@ int sasl_client_start(sasl_conn_t *conn,
 		break;
 	    }
 
-	    /* Prefer server advertised CB mechanisms */
-	    if (SASL_CB_PRESENT(c_conn->cparams) && plus) {
+            /*
+             * Include channel bindings if present and the server supports
+             * them or we are not negotiating mechanisms.
+             */
+	    if (SASL_CB_PRESENT(c_conn->cparams) && (plus || list_len == 1)) {
 		cbindingdisp = SASL_CB_DISP_USED;
 	    }
 

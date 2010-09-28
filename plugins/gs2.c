@@ -192,7 +192,7 @@ sasl_gs2_new_context(const sasl_utils_t *utils)
     context_t *ret;
 
     ret = utils->malloc(sizeof(context_t));
-    if (!ret)
+    if (ret == NULL)
         return NULL;
 
     memset(ret, 0, sizeof(context_t));

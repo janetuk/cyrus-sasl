@@ -185,7 +185,7 @@ int *listensock(const char *port, const int af)
 
 void usage(void)
 {
-    fprintf(stderr, "usage: server [-c] [-h hostname] [-p port] [-s service] [-m mech]\n");
+    fprintf(stderr, "usage: server [-C] [-h hostname] [-p port] [-s service] [-m mech]\n");
     exit(EX_USAGE);
 }
 
@@ -325,10 +325,14 @@ int main(int argc, char *argv[])
     sasl_conn_t *conn;
     int cb_flag = 0;
 
-    while ((c = getopt(argc, argv, "ch:p:s:m:")) != EOF) {
+    while ((c = getopt(argc, argv, "Cch:p:s:m:")) != EOF) {
 	switch(c) {
+	case 'C':
+	    cb_flag = 2;        /* channel bindings are critical */
+	    break;
+
 	case 'c':
-	    cb_flag = 1;
+	    cb_flag = 1;        /* channel bindings are present */
 	    break;
 
 	case 'h':
@@ -454,11 +458,12 @@ int main(int argc, char *argv[])
 	if (r != SASL_OK) saslfail(r, "allocating connection state");
 
 	cb.name = "sasl-sample";
-	cb.critical = cb_flag;
+	cb.critical = cb_flag > 1;
 	cb.data = "this is a test of channel binding";
 	cb.len = strlen(cb.data);
 
-	sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
+	if (cb_flag)
+	    sasl_setprop(conn, SASL_CHANNEL_BINDING, &cb);
 
 	/* set external properties here
 	   sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops); */

@@ -321,7 +321,7 @@ int mysasl_negotiate(FILE *in, FILE *out, sasl_conn_t *conn)
 
 void usage(void)
 {
-    fprintf(stderr, "usage: client [-c] [-p port] [-s service] [-m mech] host\n");
+    fprintf(stderr, "usage: client [-c|-C] [-p port] [-s service] [-m mech] host\n");
     exit(EX_USAGE);
 }
 
@@ -344,10 +344,14 @@ int main(int argc, char *argv[])
     int cb_flag = 0;
     sasl_channel_binding_t cb;
 
-    while ((c = getopt(argc, argv, "cp:s:m:")) != EOF) {
+    while ((c = getopt(argc, argv, "Ccp:s:m:")) != EOF) {
 	switch(c) {
+	case 'C':
+	    cb_flag = 2;    /* channel bindings are critical */
+	    break;
+
 	case 'c':
-	    cb_flag = 1;
+	    cb_flag = 1;    /* channel bindings are optional */
 	    break;
 
 	case 'p':
@@ -427,6 +431,7 @@ int main(int argc, char *argv[])
 
     if (cb_flag) {
         cb.name = "sasl-sample";
+        cb.critical = cb_flag > 1;
         cb.data = "this is a test of channel binding";
         cb.len = strlen(cb.data);
 

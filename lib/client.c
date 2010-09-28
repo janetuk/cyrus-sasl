@@ -456,7 +456,44 @@ _sasl_client_order_mechs(const sasl_utils_t *utils,
 	    break;
     } while (1);
 
+    if (*count == 0) {
+        utils->free(list);
+        return SASL_NOMECH;
+    }
+
     *ordered_mechs = list;
+
+    return SASL_OK;
+}
+
+static inline int
+_sasl_cbinding_disp(sasl_client_params_t *cparams,
+                    int mech_nego,
+                    int server_can_cb,
+                    unsigned int *cbindingdisp)
+{
+    /*
+     * If negotiating mechanisms, then we fail immediately if the
+     * client requires channel binding and the server does not
+     * advertise support. Otherwise we send "y" (which later will
+     * become "p" if we select a supporting mechanism).
+     *
+     * If the client explicitly selected a mechanism, then we only
+     * send channel bindings if they're marked critical.
+     */
+
+    *cbindingdisp = SASL_CB_DISP_NONE;
+
+    if (SASL_CB_PRESENT(cparams)) {
+        if (mech_nego) {
+            if (!server_can_cb && SASL_CB_CRITICAL(cparams))
+	        return SASL_NOMECH;
+            else
+                *cbindingdisp = SASL_CB_DISP_WANT;
+        } else if (SASL_CB_CRITICAL(cparams)) {
+            *cbindingdisp = SASL_CB_DISP_USED;
+        }
+    }
 
     return SASL_OK;
 }
@@ -514,6 +551,7 @@ int sasl_client_start(sasl_conn_t *conn,
 	minssf = conn->props.min_ssf - conn->external.ssf;
     }
 
+    /* Order mechanisms so -PLUS are preferred */
     result = _sasl_client_order_mechs(c_conn->cparams->utils,
 				      mechlist,
 				      SASL_CB_PRESENT(c_conn->cparams),
@@ -523,16 +561,15 @@ int sasl_client_start(sasl_conn_t *conn,
     if (result != 0)
 	goto done;
 
-    if (SASL_CB_PRESENT(c_conn->cparams)) {
-	if (server_can_cb == 0 && SASL_CB_CRITICAL(c_conn->cparams)) {
-	    result = SASL_BADBINDING;
-	    goto done;
-	} else {
-	    cbindingdisp = SASL_CB_DISP_WANT;
-	}
-    } else {
-	cbindingdisp = SASL_CB_DISP_NONE;
-    }
+    /*
+     * Determine channel binding disposition based on whether we
+     * are doing mechanism negotiation and whether server supports
+     * channel bindings.
+     */
+    result = _sasl_cbinding_disp(c_conn->cparams, (list_len > 1),
+                                 server_can_cb, &cbindingdisp);
+    if (result != 0)
+	goto done;
 
     for (i = 0, name = ordered_mechs; i < list_len; i++) {
 	/* foreach in client list */
@@ -618,11 +655,7 @@ int sasl_client_start(sasl_conn_t *conn,
 		break;
 	    }
 
-            /*
-             * Include channel bindings if present and the server supports
-             * them or we are not negotiating mechanisms.
-             */
-	    if (SASL_CB_PRESENT(c_conn->cparams) && (plus || list_len == 1)) {
+	    if (SASL_CB_PRESENT(c_conn->cparams) && plus) {
 		cbindingdisp = SASL_CB_DISP_USED;
 	    }
 

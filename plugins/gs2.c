@@ -1592,8 +1592,6 @@ gs2_get_init_creds(context_t *text,
             if (result != SASL_OK)
                 goto cleanup;
         }
-
-        assert(oparams->authid != NULL);
     }
 
     /*

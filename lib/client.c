@@ -470,7 +470,7 @@ static inline int
 _sasl_cbinding_disp(sasl_client_params_t *cparams,
                     int mech_nego,
                     int server_can_cb,
-                    unsigned int *cbindingdisp)
+                    sasl_cbinding_disp_t *cbindingdisp)
 {
     /*
      * If negotiating mechanisms, then we fail immediately if the
@@ -526,7 +526,7 @@ int sasl_client_start(sasl_conn_t *conn,
     size_t i, list_len;
     sasl_ssf_t bestssf = 0, minssf = 0;
     int result, server_can_cb = 0;
-    unsigned int cbindingdisp;
+    sasl_cbinding_disp_t cbindingdisp;
 
     if(_sasl_client_active==0) return SASL_NOTINIT;
 

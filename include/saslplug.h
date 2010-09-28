@@ -223,12 +223,15 @@ typedef enum  {
  * Channel binding macros     **
  ******************************/
 
-/* TRUE if channel binding is non-NULL */
-#define SASL_CB_DISP_NONE   0x00    /* client did not support CB */
-#define SASL_CB_DISP_USED   0x01    /* client supports CB, thinks server does not */
-#define SASL_CB_DISP_WANT   0x02    /* client supports and used CB */
+typedef enum {
+    SASL_CB_DISP_NONE = 0,          /* client did not support CB */
+    SASL_CB_DISP_USED,              /* client supports CB, thinks server does not */
+    SASL_CB_DISP_WANT               /* client supports and used CB */
+} sasl_cbinding_disp_t;
 
+/* TRUE if channel binding is non-NULL */
 #define SASL_CB_PRESENT(params)     ((params)->cbinding != NULL)
+/* TRUE if channel binding is marked critical */
 #define SASL_CB_CRITICAL(params)    (SASL_CB_PRESENT(params) && \
 				     (params)->cbinding->critical)
 

@@ -601,7 +601,7 @@ int sasl_client_start(sasl_conn_t *conn,
 	    }
 
 	    /* Can we meet it's features? */
-	   if (SASL_CB_PRESENT(c_conn->cparams) &&
+	    if (cbindingdisp != SASL_CB_DISP_NONE &&
 		!(m->m.plug->features & SASL_FEAT_CHANNEL_BINDING)) {
 		break;
 	    }

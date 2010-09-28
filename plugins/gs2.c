@@ -571,12 +571,12 @@ gs2_common_plug_init(const sasl_utils_t *utils,
         return SASL_NOMECH;
     }
 
-    plugs = utils->malloc(2 * gs2_mechs->count * plugsize);
+    plugs = utils->malloc(gs2_mechs->count * plugsize);
     if (plugs == NULL) {
         MEMERROR(utils);
         return SASL_NOMEM;
     }
-    memset(plugs, 0, 2 * gs2_mechs->count * plugsize);
+    memset(plugs, 0, gs2_mechs->count * plugsize);
 
     for (i = 0; i < gs2_mechs->count; i++) {
         gss_buffer_desc sasl_mech_name = GSS_C_EMPTY_BUFFER;

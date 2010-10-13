@@ -1,11 +1,4 @@
-To build the GS2 SASL mechanism, you need a version of MIT Kerberos
-from the users/lhoward/sasl-gs2 branch:
-
-    svn://anonsvn.mit.edu/krb5/users/lhoward/sasl-gs2
-
-More information at:
-
-    http://k5wiki.kerberos.org/wiki/Projects/GS2
+To build the GS2 SASL mechanism, you need MIT Kerberos 1.9.
 
 Please e-mail lukeh@padl.com with any bug reports.
 

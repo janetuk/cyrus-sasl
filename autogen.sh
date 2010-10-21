@@ -1,13 +1,11 @@
-#!/bin/sh
-touch NEWS
-libtoolize --copy --install
-aclocal -I config -I cmulocal
-automake --add-missing
-autoconf
-autoheader
+#! /bin/sh
 
-cd saslauthd
-aclocal -I ../config -I ../cmulocal
-automake --add-missing
-autoconf
-autoheader
+PATH=/usr/local/bin:$PATH
+
+#autoreconf -ivf
+
+aclocal -I . -I cmulocal -I config && \
+    autoheader && \
+    libtoolize --automake -c && \
+    autoconf && \
+    automake --add-missing --copy

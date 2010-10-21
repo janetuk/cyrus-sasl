@@ -144,8 +144,6 @@ static gss_OID_desc gss_spnego_mechanism_oid_desc =
         {6, (void *)"\x2b\x06\x01\x05\x05\x02"};
 static gss_OID_desc gss_krb5_mechanism_oid_desc =
         {9, (void *)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x02"};
-static gss_OID_desc gss_eap_mechanism_oid_desc =
-        {9, (void *)"\x2b\x06\x01\x04\x01\xa9\x4a\x15\x01" };
 
 typedef struct context {
     int state;
@@ -1274,27 +1272,6 @@ static sasl_server_plug_t gssapi_server_plugins[] =
 	NULL,				/* mech_avail */
 	NULL				/* spare */
     },
-#if 0
-    {
-	"GSS-EAP",			/* mech_name */
-	128,			        /* max_ssf */
-	SASL_SEC_NOPLAINTEXT
-	| SASL_SEC_NOACTIVE
-	| SASL_SEC_MUTUAL_AUTH,		/* security_flags */
-	SASL_FEAT_WANT_CLIENT_FIRST
-	| SASL_FEAT_ALLOWS_PROXY,	/* features */
-	NULL,				/* glob_context */
-	&gssapi_server_mech_new,	/* mech_new */
-	&gssapi_server_mech_step,	/* mech_step */
-	&gssapi_common_mech_dispose,	/* mech_dispose */
-	&gssapi_common_mech_free,	/* mech_free */
-	NULL,				/* setpass */
-	NULL,				/* user_query */
-	NULL,				/* idle */
-	NULL,				/* mech_avail */
-	NULL				/* spare */
-    }
-#endif
 };
 
 int gssapiv2_server_plug_init(
@@ -1405,14 +1382,6 @@ static int gss_spnego_client_mech_new(void *glob_context,
 {
     return _gssapi_client_mech_new(glob_context, params, &gss_spnego_mechanism_oid_desc,
                                    0, conn_context);
-}
-
-static int gss_eap_client_mech_new(void *glob_context,
-				   sasl_client_params_t *params,
-				   void **conn_context)
-{
-    return _gssapi_client_mech_new(glob_context, params, &gss_eap_mechanism_oid_desc,
-                                   1, conn_context);
 }
 
 static int gssapi_client_mech_step(void *conn_context,
@@ -1996,29 +1965,6 @@ static sasl_client_plug_t gssapi_client_plugins[] =
 	NULL,				/* spare */
 	NULL				/* spare */
     },
-#if 0
-    {
-	"GSS-EAP",			/* mech_name */
-	128,			        /* max_ssf */
-	SASL_SEC_NOPLAINTEXT
-	| SASL_SEC_NOACTIVE
-	| SASL_SEC_NOANONYMOUS
-	| SASL_SEC_MUTUAL_AUTH 
-	| SASL_SEC_PASS_CREDENTIALS,    /* security_flags */
-	SASL_FEAT_NEEDSERVERFQDN
-	| SASL_FEAT_WANT_CLIENT_FIRST
-	| SASL_FEAT_ALLOWS_PROXY,	/* features */
-	gssapi_required_prompts,	/* required_prompts */
-	NULL,				/* glob_context */
-	&gss_eap_client_mech_new,	/* mech_new */
-	&gssapi_client_mech_step,	/* mech_step */
-	&gssapi_common_mech_dispose,	/* mech_dispose */
-	&gssapi_common_mech_free,	/* mech_free */
-	NULL,				/* idle */
-	NULL,				/* spare */
-	NULL				/* spare */
-    },
-#endif
 };
 
 int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)), 

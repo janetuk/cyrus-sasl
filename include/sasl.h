@@ -171,7 +171,13 @@
 #define SASL_NOCHANGE   -22  /* requested change was not needed */
 #define SASL_WEAKPASS   -27  /* passphrase is too weak for security policy */
 #define SASL_NOUSERPASS -28  /* user supplied passwords not permitted */
-#define SASL_BADBINDING -29  /* channel binding failure */
+#define SASL_NEED_OLD_PASSWD	-29 /* sasl_setpass needs old password in order
+				    to perform password change */
+#define SASL_CONSTRAINT_VIOLAT	-30 /* a property can't be stored,
+				       because of some constrains/policy violation */
+#define SASL_USER_EXISTS	-31 /* sasl_auxprop_rename_user has failed because
+				       new_userid already exists */
+#define SASL_BADBINDING		-32 /* channel binding failure */
 
 /* max size of a sasl mechanism name */
 #define SASL_MECHNAMEMAX 20

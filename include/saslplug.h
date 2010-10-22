@@ -343,11 +343,17 @@ typedef struct sasl_client_params {
 /* This plugin allows proxying */
 #define SASL_FEAT_ALLOWS_PROXY 0x0020
 
+/* server plugin needs old password in order to change password */
+#define SASL_FEAT_NEED_OLD_PASSWD 0x0040
+
+/* server plugin don't use cleartext userPassword attribute */
+#define SASL_FEAT_DONTUSE_USERPASSWD 0x0080
+
 /* Underlying mechanism uses GSS framing */
-#define SASL_FEAT_GSS_FRAMING       0x0040
+#define SASL_FEAT_GSS_FRAMING       0x0100
 
 /* Underlying mechanism supports channel binding */
-#define SASL_FEAT_CHANNEL_BINDING  0x0080
+#define SASL_FEAT_CHANNEL_BINDING  0x0200
 
 /* client plug-in features */
 #define SASL_FEAT_NEEDSERVERFQDN 0x0001

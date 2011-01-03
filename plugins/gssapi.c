@@ -51,7 +51,6 @@
 #include <gssapi/gssapi.h>
 #endif
 
-#include <gssapi/gssapi_ext.h>
 #ifdef WIN32
 #  include <winsock2.h>
 

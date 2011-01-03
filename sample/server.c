@@ -83,7 +83,9 @@
 
 #include <sasl.h>
 #include <gssapi/gssapi.h>
+#ifndef KRB5_HEIMDAL
 #include <gssapi/gssapi_ext.h>
+#endif
 
 #include "common.h"
 

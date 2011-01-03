@@ -601,7 +601,9 @@ enumerateAttributes(OM_uint32 *minor,
             dumpAttribute(minor, name, &attrs->elements[i], noisy);
     }
 
+#ifndef KRB5_HEIMDAL
     gss_release_oid(&tmp, &mech);
+#endif
     gss_release_buffer_set(&tmp, &attrs);
 
     return major;

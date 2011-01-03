@@ -1481,6 +1481,7 @@ gs2_escape_authzid(const sasl_utils_t *utils,
 }
 
 #define GOT_CREDS(text, params) ((text)->client_creds != NULL || (params)->gss_creds != NULL)
+#define CRED_ERROR(status)      ((status) == GSS_S_CRED_UNAVAIL || (status) == GSS_S_NO_CRED)
 
 static int
 gs2_get_init_creds(context_t *text,
@@ -1531,7 +1532,7 @@ gs2_get_init_creds(context_t *text,
                                         NULL);
             if (GSS_ERROR(maj_stat))
                 goto cleanup;
-        } else if (maj_stat != GSS_S_CRED_UNAVAIL)
+        } else if (!CRED_ERROR(maj_stat))
             goto cleanup;
 
         if (text->client_name != GSS_C_NO_NAME) {
@@ -1617,7 +1618,7 @@ gs2_get_init_creds(context_t *text,
                                     &text->client_creds,
                                     NULL,
                                     &text->lifetime);
-        if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CRED_UNAVAIL)
+        if (GSS_ERROR(maj_stat) && !CRED_ERROR(maj_stat))
             goto cleanup;
     }
 

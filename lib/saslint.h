@@ -303,6 +303,7 @@ extern sasl_mutex_utils_t _sasl_mutex_utils;
 
 extern int _sasl_is_equal_mech(const char *req_mech,
                                const char *plug_mech,
+                               size_t req_mech_len,
                                int *plus);
 
 /*

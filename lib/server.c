@@ -1025,6 +1025,7 @@ static int mech_permitted(sasl_conn_t *conn,
     if (_sasl_getcallback(conn, SASL_CB_GETOPT, &getopt, &context)
             == SASL_OK) {
 	const char *mlist = NULL;
+	int plus = 0;
 
 	getopt(context, NULL, "mech_list", &mlist, NULL);
 
@@ -1034,9 +1035,8 @@ static int mech_permitted(sasl_conn_t *conn,
 
 	    while (*mlist) {
 		for (cp = mlist; *cp && !isspace((int) *cp); cp++);
-		if (((size_t) (cp - mlist) == strlen(plug->mech_name)) &&
-		    !strncasecmp(mlist, plug->mech_name,
-				 strlen(plug->mech_name))) {
+		if (_sasl_is_equal_mech(mlist, plug->mech_name, (size_t) (cp - mlist), &plus)) {
+		    /* found a match */
 		    break;
 		}
 		mlist = cp;
@@ -1214,6 +1214,7 @@ int sasl_server_start(sasl_conn_t *conn,
     int result;
     context_list_t *cur, **prev;
     mechanism_t *m;
+    size_t mech_len;
     int plus = 0;
 
     if (_sasl_server_active==0) return SASL_NOTINIT;
@@ -1221,6 +1222,7 @@ int sasl_server_start(sasl_conn_t *conn,
     /* make sure mech is valid mechanism
        if not return appropriate error */
     m=mechlist->mech_list;
+    mech_len = strlen(mech);
 
     /* check parameters */
     if(!conn) return SASL_BADPARAM;
@@ -1232,7 +1234,7 @@ int sasl_server_start(sasl_conn_t *conn,
     if(serveroutlen) *serveroutlen = 0;
 
     while (m != NULL) {
-	if (_sasl_is_equal_mech(mech, m->m.plug->mech_name, &plus))
+	if (_sasl_is_equal_mech(mech, m->m.plug->mech_name, mech_len, &plus))
 	    break;
 
 	m = m->next;

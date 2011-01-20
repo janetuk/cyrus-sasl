@@ -2328,17 +2328,17 @@ int sasl_listmech(sasl_conn_t *conn,
 
 int _sasl_is_equal_mech(const char *req_mech,
                         const char *plug_mech,
+                        size_t req_mech_len,
                         int *plus)
 {
-    size_t len = strlen(req_mech);
     size_t n;
 
-    if (len > 5 &&
-        strcasecmp(&req_mech[len - 5], "-PLUS") == 0) {
-        n = len - 5;
+    if (req_mech_len > 5 &&
+        strcasecmp(&req_mech[req_mech_len - 5], "-PLUS") == 0) {
+        n = req_mech_len - 5;
         *plus = 1;
     } else {
-        n = len;
+        n = req_mech_len;
         *plus = 0;
     }
 

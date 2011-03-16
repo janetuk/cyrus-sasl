@@ -72,6 +72,9 @@
 
 #include <config.h>
 #include <gssapi/gssapi.h>
+#ifdef HAVE_GSSAPI_GSSAPI_EXT_H
+#include <gssapi/gssapi_ext.h>
+#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <sasl.h>
@@ -1483,6 +1486,11 @@ gs2_escape_authzid(const sasl_utils_t *utils,
 #define GOT_CREDS(text, params) ((text)->client_creds != NULL || (params)->gss_creds != NULL)
 #define CRED_ERROR(status)      ((status) == GSS_S_CRED_UNAVAIL || (status) == GSS_S_NO_CRED)
 
+/*
+ * Determine the authentication identity from the application supplied
+ * GSS credential, the application supplied identity, and the default
+ * GSS credential, in that order. Then, acquire credentials.
+ */
 static int
 gs2_get_init_creds(context_t *text,
                    sasl_client_params_t *params,
@@ -1494,67 +1502,27 @@ gs2_get_init_creds(context_t *text,
     int user_result = SASL_OK;
     int auth_result = SASL_OK;
     int pass_result = SASL_OK;
-    OM_uint32 maj_stat, min_stat;
+    OM_uint32 maj_stat = GSS_S_COMPLETE, min_stat = 0;
     gss_OID_set_desc mechs;
     gss_buffer_desc cred_authid = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
 
     mechs.count = 1;
     mechs.elements = (gss_OID)text->mechanism;
 
     /*
-     * Determine the authentication identity from the application supplied
-     * GSS credential, the default GSS credential, and the application
-     * supplied identity, in that order.
+     * Get the authentication identity from the application.
      */
     if (oparams->authid == NULL) {
-        assert(text->client_name == GSS_C_NO_NAME);
-
-        if (!GOT_CREDS(text, params)) {
-            maj_stat = gss_acquire_cred(&min_stat,
-                                        GSS_C_NO_NAME,
-                                        GSS_C_INDEFINITE,
-                                        &mechs,
-                                        GSS_C_INITIATE,
-                                        &text->client_creds,
-                                        NULL,
-                                        &text->lifetime);
-        } else
-            maj_stat = GSS_S_COMPLETE;
-
-        if (maj_stat == GSS_S_COMPLETE) {
-            maj_stat = gss_inquire_cred(&min_stat,
-                                        params->gss_creds
-                                            ? (gss_cred_id_t)params->gss_creds
-                                            : text->client_creds,
-                                        &text->client_name,
-                                        NULL,
-                                        NULL,
-                                        NULL);
-            if (GSS_ERROR(maj_stat))
-                goto cleanup;
-        } else if (!CRED_ERROR(maj_stat))
+        auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
+        if (auth_result != SASL_OK && auth_result != SASL_INTERACT) {
+            result = auth_result;
             goto cleanup;
-
-        if (text->client_name != GSS_C_NO_NAME) {
-            maj_stat = gss_display_name(&min_stat,
-                                        text->client_name,
-                                        &cred_authid,
-                                        NULL);
-            if (GSS_ERROR(maj_stat))
-                goto cleanup;
-
-            authid = cred_authid.value;
-        } else {
-            auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
-            if (auth_result != SASL_OK && auth_result != SASL_INTERACT) {
-                result = auth_result;
-                goto cleanup;
-            }
         }
     }
 
     /*
-     * Get the authorization identity.
+     * Get the authorization identity from the application.
      */
     if (oparams->user == NULL) {
         user_result = _plug_get_userid(params->utils, &userid, prompt_need);
@@ -1585,14 +1553,8 @@ gs2_get_init_creds(context_t *text,
             if (result != SASL_OK)
                 goto cleanup;
         }
-    }
 
-    /*
-     * If the application has provided an authentication identity, parse it.
-     */
-    if (text->client_name == GSS_C_NO_NAME &&
-        oparams->authid != NULL && oparams->authid[0] != '\0') {
-        gss_buffer_desc name_buf;
+        assert(text->client_name == GSS_C_NO_NAME);
 
         name_buf.length = strlen(oparams->authid);
         name_buf.value = (void *)oparams->authid;
@@ -1602,6 +1564,49 @@ gs2_get_init_creds(context_t *text,
                                    GSS_C_NT_USER_NAME,
                                    &text->client_name);
         if (GSS_ERROR(maj_stat))
+            goto cleanup;
+    }
+
+    /*
+     * If application didn't provide an authid, then use the default
+     * credential. If that doesn't work, give up.
+     */
+    if (!GOT_CREDS(text, params) && oparams->authid == NULL) {
+        maj_stat = gss_acquire_cred(&min_stat,
+                                    GSS_C_NO_NAME,
+                                    GSS_C_INDEFINITE,
+                                    &mechs,
+                                    GSS_C_INITIATE,
+                                    &text->client_creds,
+                                    NULL,
+                                    &text->lifetime);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
+
+        maj_stat = gss_inquire_cred(&min_stat,
+                                    params->gss_creds
+                                        ? (gss_cred_id_t)params->gss_creds
+                                        : text->client_creds,
+                                    &text->client_name,
+                                    NULL,
+                                    NULL,
+                                    NULL);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
+
+        assert(text->client_name == GSS_C_NO_NAME);
+
+        maj_stat = gss_display_name(&min_stat,
+                                    text->client_name,
+                                    &cred_authid,
+                                    NULL);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
+
+        result = params->canon_user(params->utils->conn,
+                                    cred_authid.value, cred_authid.length,
+                                    SASL_CU_AUTHID, oparams);
+        if (result != SASL_OK)
             goto cleanup;
     }
 

@@ -1554,17 +1554,19 @@ gs2_get_init_creds(context_t *text,
                 goto cleanup;
         }
 
-        assert(text->client_name == GSS_C_NO_NAME);
+        if (oparams->authid != NULL) {
+            name_buf.length = strlen(oparams->authid);
+            name_buf.value = (void *)oparams->authid;
 
-        name_buf.length = strlen(oparams->authid);
-        name_buf.value = (void *)oparams->authid;
+            assert(text->client_name == GSS_C_NO_NAME);
 
-        maj_stat = gss_import_name(&min_stat,
-                                   &name_buf,
-                                   GSS_C_NT_USER_NAME,
-                                   &text->client_name);
-        if (GSS_ERROR(maj_stat))
-            goto cleanup;
+            maj_stat = gss_import_name(&min_stat,
+                                       &name_buf,
+                                       GSS_C_NT_USER_NAME,
+                                       &text->client_name);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+        }
     }
 
     /*
@@ -1583,6 +1585,8 @@ gs2_get_init_creds(context_t *text,
         if (GSS_ERROR(maj_stat))
             goto cleanup;
 
+        assert(text->client_name == GSS_C_NO_NAME);
+
         maj_stat = gss_inquire_cred(&min_stat,
                                     params->gss_creds
                                         ? (gss_cred_id_t)params->gss_creds
@@ -1594,8 +1598,6 @@ gs2_get_init_creds(context_t *text,
         if (GSS_ERROR(maj_stat))
             goto cleanup;
 
-        assert(text->client_name == GSS_C_NO_NAME);
-
         maj_stat = gss_display_name(&min_stat,
                                     text->client_name,
                                     &cred_authid,
@@ -1603,11 +1605,24 @@ gs2_get_init_creds(context_t *text,
         if (GSS_ERROR(maj_stat))
             goto cleanup;
 
-        result = params->canon_user(params->utils->conn,
-                                    cred_authid.value, cred_authid.length,
-                                    SASL_CU_AUTHID, oparams);
-        if (result != SASL_OK)
-            goto cleanup;
+        if (userid == NULL || userid[0] == '\0') {
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHID | SASL_CU_AUTHZID,
+                                        oparams);
+        } else {
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHZID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+        }
     }
 
     /*

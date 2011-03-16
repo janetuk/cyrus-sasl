@@ -2,7 +2,7 @@
 
 PATH=/usr/local/bin:$PATH
 
-#autoreconf -ivf
+autoreconf -ivf
 
 aclocal -I . -I cmulocal -I config && \
     autoheader && \

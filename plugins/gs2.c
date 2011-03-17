@@ -1505,7 +1505,6 @@ gs2_get_init_creds(context_t *text,
     OM_uint32 maj_stat = GSS_S_COMPLETE, min_stat = 0;
     gss_OID_set_desc mechs;
     gss_buffer_desc cred_authid = GSS_C_EMPTY_BUFFER;
-    gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
 
     mechs.count = 1;
     mechs.elements = (gss_OID)text->mechanism;
@@ -1555,8 +1554,28 @@ gs2_get_init_creds(context_t *text,
         }
 
         if (oparams->authid != NULL) {
-            name_buf.length = strlen(oparams->authid);
-            name_buf.value = (void *)oparams->authid;
+            gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
+
+            /*
+             * If no realm in authid, use server FQDN; we have no mechanism-
+             * agnostic way of determing a realm from a service name.
+             */
+            if (strchr(oparams->authid, '@') == NULL &&
+                params->serverFQDN != NULL) {
+                name_buf.length = strlen(oparams->authid) + 1 + strlen(params->serverFQDN);
+
+                name_buf.value = params->utils->malloc(name_buf.length + 1);
+                if (name_buf.value == NULL) {
+                    MEMERROR(text->utils);
+                    result = SASL_NOMEM;
+                    goto cleanup;
+                }
+                snprintf(name_buf.value, name_buf.length + 1,
+                         "%s@%s", oparams->authid, params->serverFQDN);
+            } else {
+                name_buf.length = strlen(oparams->authid);
+                name_buf.value = oparams->authid;
+            }
 
             assert(text->client_name == GSS_C_NO_NAME);
 
@@ -1564,6 +1583,8 @@ gs2_get_init_creds(context_t *text,
                                        &name_buf,
                                        GSS_C_NT_USER_NAME,
                                        &text->client_name);
+            if (name_buf.value != oparams->authid)
+                params->utils->free(name_buf.value);
             if (GSS_ERROR(maj_stat))
                 goto cleanup;
         }

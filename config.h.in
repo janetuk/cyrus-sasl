@@ -129,6 +129,15 @@
 /* Define if your GSSAPI implimentation defines GSS_C_NT_USER_NAME */
 #undef HAVE_GSS_C_NT_USER_NAME
 
+/* Define to 1 if you have the `gss_decapsulate_token' function. */
+#undef HAVE_GSS_DECAPSULATE_TOKEN
+
+/* Define to 1 if you have the `gss_encapsulate_token' function. */
+#undef HAVE_GSS_ENCAPSULATE_TOKEN
+
+/* Define to 1 if you have the `gss_oid_equal' function. */
+#undef HAVE_GSS_OID_EQUAL
+
 /* Define to 1 if you have the `inet_aton' function. */
 #undef HAVE_INET_ATON
 
@@ -329,6 +338,9 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION

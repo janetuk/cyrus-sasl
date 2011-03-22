@@ -14620,6 +14620,39 @@ _ACEOF
 fi
 done
 
+  for ac_func in gss_decapsulate_token
+do :
+  ac_fn_c_check_func "$LINENO" "gss_decapsulate_token" "ac_cv_func_gss_decapsulate_token"
+if test "x$ac_cv_func_gss_decapsulate_token" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GSS_DECAPSULATE_TOKEN 1
+_ACEOF
+
+fi
+done
+
+  for ac_func in gss_encapsulate_token
+do :
+  ac_fn_c_check_func "$LINENO" "gss_encapsulate_token" "ac_cv_func_gss_encapsulate_token"
+if test "x$ac_cv_func_gss_encapsulate_token" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GSS_ENCAPSULATE_TOKEN 1
+_ACEOF
+
+fi
+done
+
+  for ac_func in gss_oid_equal
+do :
+  ac_fn_c_check_func "$LINENO" "gss_oid_equal" "ac_cv_func_gss_oid_equal"
+if test "x$ac_cv_func_gss_oid_equal" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GSS_OID_EQUAL 1
+_ACEOF
+
+fi
+done
+
   LIBS="$cmu_save_LIBS"
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5

@@ -4,6 +4,10 @@ config.log
 config.status
 config.h
 
+libtool
+ltmain.sh
+missing
+
 .DS_Store
 
 Makefile

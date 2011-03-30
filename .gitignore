@@ -7,9 +7,13 @@ config.log
 config.status
 config.sub
 config.h
+config.h.in
 configure
 depcomp
 
+saslauthd/saslauthd.h.in
+
+libtool.m4
 libtool
 ltmain.sh
 missing

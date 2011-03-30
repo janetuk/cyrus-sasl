@@ -65,6 +65,15 @@
 /* Define if your GSSAPI implimentation defines GSS_C_NT_USER_NAME */
 #undef HAVE_GSS_C_NT_USER_NAME
 
+/* Define to 1 if you have the `gss_decapsulate_token' function. */
+#undef HAVE_GSS_DECAPSULATE_TOKEN
+
+/* Define to 1 if you have the `gss_encapsulate_token' function. */
+#undef HAVE_GSS_ENCAPSULATE_TOKEN
+
+/* Define to 1 if you have the `gss_oid_equal' function. */
+#undef HAVE_GSS_OID_EQUAL
+
 /* Include HTTP form Support */
 #undef HAVE_HTTPFORM
 

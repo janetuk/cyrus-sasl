@@ -9,3 +9,13 @@ aclocal -I . -I cmulocal -I config && \
     libtoolize --automake -c && \
     autoconf && \
     automake --add-missing --copy
+
+cd saslauthd
+
+autoreconf -ivf
+
+aclocal -I . -I ../cmulocal -I ../config && \
+    autoheader && \
+    libtoolize --automake -c && \
+    autoconf && \
+    automake --add-missing --copy

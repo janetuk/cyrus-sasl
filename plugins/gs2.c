@@ -539,7 +539,7 @@ cleanup:
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
         ret = SASL_FAIL;
     }
-    if (ret != SASL_OK && ret != SASL_CONTINUE)
+    if (ret < SASL_OK)
         sasl_gs2_free_context_contents(text);
 
     return ret;
@@ -842,7 +842,7 @@ cleanup:
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
         ret = SASL_FAIL;
     }
-    if (ret != SASL_OK && ret != SASL_CONTINUE)
+    if (ret < SASL_OK)
         sasl_gs2_free_context_contents(text);
 
     return ret;

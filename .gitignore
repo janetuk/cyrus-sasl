@@ -1,11 +1,8 @@
-aclocal.m4
 autom4te.cache
-compile
 config.cache
 config.log
 config.status
 config.h
-depcomp
 
 libtool
 ltmain.sh
@@ -13,7 +10,6 @@ missing
 
 .DS_Store
 
-Makefile.in
 Makefile
 
 *.la

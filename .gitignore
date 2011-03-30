@@ -5,6 +5,7 @@ config.cache
 config.log
 config.status
 config.h
+configure
 depcomp
 
 libtool

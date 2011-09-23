@@ -1560,6 +1560,9 @@ gs2_get_init_creds(context_t *text,
                                        &text->client_name);
             if (GSS_ERROR(maj_stat))
                 goto cleanup;
+
+            /* The authid may have changed after prompting, so free any creds */
+            gss_release_cred(&min_stat, &text->client_creds);
         }
     }
 
@@ -1589,8 +1592,11 @@ gs2_get_init_creds(context_t *text,
                                     NULL,
                                     NULL,
                                     NULL);
-        if (GSS_ERROR(maj_stat))
-            goto cleanup;
+        if (GSS_ERROR(maj_stat)) {
+            /* Maybe there was no default credential */
+            auth_result = SASL_INTERACT;
+            goto interact;
+        }
 
         maj_stat = gss_display_name(&min_stat,
                                     text->client_name,
@@ -1670,6 +1676,8 @@ gs2_get_init_creds(context_t *text,
     }
 
     maj_stat = GSS_S_COMPLETE;
+
+interact:
 
     /* free prompts we got */
     if (prompt_need && *prompt_need) {

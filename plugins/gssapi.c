@@ -51,6 +51,7 @@
 #include <gssapi/gssapi.h>
 #endif
 
+#include <gssapi/gssapi_ext.h>
 #ifdef WIN32
 #  include <winsock2.h>
 
@@ -66,6 +67,7 @@
 #  include <arpa/inet.h>
 #  include <netdb.h>
 #endif /* WIN32 */
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <sasl.h>
@@ -177,6 +179,10 @@ typedef struct context {
 
     gss_OID mech;
     int rfc2222_gss : 1;
+
+    sasl_secret_t *password;
+    unsigned int free_password;
+    OM_uint32 lifetime;
 } context_t;
 
 enum {
@@ -185,6 +191,12 @@ enum {
     SASL_GSSAPI_STATE_SSFREQ = 3,
     SASL_GSSAPI_STATE_AUTHENTICATED = 4
 };
+
+static int
+gssapi_get_init_creds(context_t *text,
+                      sasl_client_params_t *params,
+                      sasl_interact_t **prompt_need,
+                      sasl_out_params_t *oparams);
 
 /* sasl_gss_log: only logs status string returned from gss_display_status() */
 #define sasl_gss_log(x,y,z) sasl_gss_seterror_(x,y,z,1)
@@ -583,8 +595,12 @@ static int sasl_gss_free_context_contents(context_t *text)
 	text->authid = NULL;
     }
 
-    return SASL_OK;
+    if (text->free_password)
+        _plug_free_secret(text->utils, &text->password);
 
+    memset(text, 0, sizeof(*text));
+
+    return SASL_OK;
 }
 
 static void gssapi_common_mech_dispose(void *conn_context,
@@ -754,7 +770,7 @@ gssapi_server_mech_step(void *conn_context,
 	maj_stat =
 	    gss_accept_sec_context(&min_stat,
 				   &(text->gss_ctx),
-				   params->gss_creds ? params->gss_creds : text->server_creds,
+				   text->server_creds,
 				   input_token,
 				   GSS_C_NO_CHANNEL_BINDINGS,
 				   &text->client_name,
@@ -1415,82 +1431,14 @@ static int gssapi_client_mech_step(void *conn_context,
 
     case SASL_GSSAPI_STATE_AUTHNEG:
 	/* try to get the userid */
-	if (text->user == NULL) {
-	    int user_result = SASL_OK;
-	    int pass_result = SASL_OK;
-	    
-	    user_result = _plug_get_userid(params->utils, &text->user,
-					   prompt_need);
-	    
-	    if ((user_result != SASL_OK) && (user_result != SASL_INTERACT)) {
-		sasl_gss_free_context_contents(text);
-		return user_result;
-	    }
-		    
-	    /* free prompts we got */
-	    if (prompt_need && *prompt_need) {
-		params->utils->free(*prompt_need);
-		*prompt_need = NULL;
-	    }
-
-            if (params->gss_creds == GSS_C_NO_CREDENTIAL) {
-		unsigned int free_password = 0;
-		sasl_secret_t *password = NULL;
-
-		pass_result = _plug_get_password(params->utils, &password,
-					         &free_password, prompt_need);
-		if (pass_result == SASL_OK) {
-		    gss_buffer_desc pwBuf;
-		    gss_buffer_desc nameBuf;
-		    gss_OID_set_desc mechs;
-
-		    nameBuf.length = strlen(text->user);
-		    nameBuf.value = (void *)text->user;
-		    pwBuf.length = password->len;
-		    pwBuf.value = password->data;
-		    mechs.count = 1;
-		    mechs.elements = text->mech;
-
-		    GSS_LOCK_MUTEX(params->utils);
-		    maj_stat = gss_import_name(&min_stat, &nameBuf,
-					       GSS_C_NT_USER_NAME, &text->client_name);
-		    if (maj_stat == GSS_S_COMPLETE) {
-			maj_stat = gss_acquire_cred_with_password(&min_stat,
-								  text->client_name,
-								  &pwBuf, GSS_C_INDEFINITE,
-								  &mechs, GSS_C_INITIATE,
-								  &text->client_creds,
-                                                                  NULL, NULL);
-			if (GSS_ERROR(maj_stat)) {
-			    if (free_password) _plug_free_secret(params->utils, &password);
-			    sasl_gss_seterror(text->utils, maj_stat, min_stat);
-			    GSS_UNLOCK_MUTEX(params->utils);
-			    sasl_gss_free_context_contents(text);
-			    return SASL_FAIL;
-			}
-		    }
-		    GSS_UNLOCK_MUTEX(params->utils);
-		    if (free_password) _plug_free_secret(params->utils, &password);
-		}
-	    }
-	    /* if there are prompts not filled in */
-	    if (user_result == SASL_INTERACT && text->mech != &gss_krb5_mechanism_oid_desc) {
-		int result =
-		_plug_make_prompts(params->utils, prompt_need,
-				   user_result == SASL_INTERACT ?
-				   "Please enter your authorization name" : NULL,
-				   NULL,
-				   NULL, NULL,
-				   pass_result == SASL_INTERACT ?
-				   "Please enter your password" : NULL, NULL,
-				   NULL, NULL, NULL,
-				   NULL, NULL, NULL);
-		if (result != SASL_OK) return result;
-		return SASL_INTERACT;
-	    }
-
-	}
-	    
+        if (text->gss_ctx == GSS_C_NO_CONTEXT) {
+            ret = gssapi_get_init_creds(text, params, prompt_need, oparams);
+            if (ret != SASL_OK) {
+                if (ret < SASL_OK)
+		    sasl_gss_free_context_contents(text);
+		return ret;
+            }
+        }
 	if (text->server_name == GSS_C_NO_NAME) { /* only once */
 	    name_token.length = strlen(params->service) + 1 + strlen(params->serverFQDN);
 	    name_token.value = (char *)params->utils->malloc((name_token.length + 1) * sizeof(char));
@@ -1991,4 +1939,244 @@ int gssapiv2_client_plug_init(const sasl_utils_t *utils __attribute__((unused)),
 #endif
     
     return SASL_OK;
+}
+
+#define GOT_CREDS(text, params) ((text)->client_creds != NULL || (params)->gss_creds != NULL)
+#define CRED_ERROR(status)      ((status) == GSS_S_CRED_UNAVAIL || (status) == GSS_S_NO_CRED)
+
+/*
+ * Determine the authentication identity from the application supplied
+ * GSS credential, the application supplied identity, and the default
+ * GSS credential, in that order. Then, acquire credentials.
+ */
+static int
+gssapi_get_init_creds(context_t *text,
+                      sasl_client_params_t *params,
+                      sasl_interact_t **prompt_need,
+                      sasl_out_params_t *oparams)
+{
+    int result = SASL_OK;
+    const char *authid = NULL, *userid = NULL;
+    int user_result = SASL_OK;
+    int auth_result = SASL_OK;
+    int pass_result = SASL_OK;
+    OM_uint32 maj_stat = GSS_S_COMPLETE, min_stat = 0;
+    gss_OID_set_desc mechs;
+    gss_buffer_desc cred_authid = GSS_C_EMPTY_BUFFER;
+    gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
+
+    mechs.count = 1;
+    mechs.elements = (gss_OID)text->mech;
+
+    /*
+     * Get the authentication identity from the application.
+     */
+    if (oparams->authid == NULL) {
+        auth_result = _plug_get_authid(params->utils, &authid, prompt_need);
+        if (auth_result != SASL_OK && auth_result != SASL_INTERACT) {
+            result = auth_result;
+            goto cleanup;
+        }
+    }
+
+    /*
+     * Get the authorization identity from the application.
+     */
+    if (oparams->user == NULL) {
+        user_result = _plug_get_userid(params->utils, &userid, prompt_need);
+        if (user_result != SASL_OK && user_result != SASL_INTERACT) {
+            result = user_result;
+            goto cleanup;
+        }
+    }
+
+    /*
+     * Canonicalize the authentication and authorization identities before
+     * calling GSS_Import_name.
+     */
+    if (auth_result == SASL_OK && user_result == SASL_OK &&
+        oparams->authid == NULL) {
+        if (userid == NULL || userid[0] == '\0') {
+            result = params->canon_user(params->utils->conn, authid, 0,
+                                        SASL_CU_AUTHID | SASL_CU_AUTHZID,
+                                        oparams);
+        } else {
+            result = params->canon_user(params->utils->conn,
+                                        authid, 0, SASL_CU_AUTHID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+
+            result = params->canon_user(params->utils->conn,
+                                        userid, 0, SASL_CU_AUTHZID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+        }
+
+        if (oparams->authid != NULL) {
+            name_buf.length = strlen(oparams->authid);
+            name_buf.value = (void *)oparams->authid;
+
+            assert(text->client_name == GSS_C_NO_NAME);
+
+            maj_stat = gss_import_name(&min_stat,
+                                       &name_buf,
+                                       GSS_C_NT_USER_NAME,
+                                       &text->client_name);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+
+            /* The authid may have changed after prompting, so free any creds */
+            gss_release_cred(&min_stat, &text->client_creds);
+        }
+    }
+
+    /*
+     * If application didn't provide an authid, then use the default
+     * credential. If that doesn't work, give up.
+     */
+    if (!GOT_CREDS(text, params) && oparams->authid == NULL) {
+        maj_stat = gss_acquire_cred(&min_stat,
+                                    GSS_C_NO_NAME,
+                                    GSS_C_INDEFINITE,
+                                    &mechs,
+                                    GSS_C_INITIATE,
+                                    &text->client_creds,
+                                    NULL,
+                                    &text->lifetime);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
+
+        assert(text->client_name == GSS_C_NO_NAME);
+
+        maj_stat = gss_inquire_cred(&min_stat,
+                                    params->gss_creds
+                                        ? (gss_cred_id_t)params->gss_creds
+                                        : text->client_creds,
+                                    &text->client_name,
+                                    NULL,
+                                    NULL,
+                                    NULL);
+        if (GSS_ERROR(maj_stat)) {
+            /* Maybe there was no default credential */
+            auth_result = SASL_INTERACT;
+            goto interact;
+        }
+
+        maj_stat = gss_display_name(&min_stat,
+                                    text->client_name,
+                                    &cred_authid,
+                                    NULL);
+        if (GSS_ERROR(maj_stat))
+            goto cleanup;
+
+        if (userid == NULL || userid[0] == '\0') {
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHID | SASL_CU_AUTHZID,
+                                        oparams);
+        } else {
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+
+            result = params->canon_user(params->utils->conn,
+                                        cred_authid.value, cred_authid.length,
+                                        SASL_CU_AUTHZID, oparams);
+            if (result != SASL_OK)
+                goto cleanup;
+        }
+    }
+
+    /*
+     * Armed with the authentication identity, try to get a credential without
+     * a password.
+     */
+    if (!GOT_CREDS(text, params) && text->client_name != GSS_C_NO_NAME) {
+        maj_stat = gss_acquire_cred(&min_stat,
+                                    text->client_name,
+                                    GSS_C_INDEFINITE,
+                                    &mechs,
+                                    GSS_C_INITIATE,
+                                    &text->client_creds,
+                                    NULL,
+                                    &text->lifetime);
+        if (GSS_ERROR(maj_stat) && !CRED_ERROR(maj_stat))
+            goto cleanup;
+    }
+
+    /*
+     * If that failed, try to get a credential with a password.
+     */
+    if (!GOT_CREDS(text, params)) {
+        if (text->password == NULL) {
+            pass_result = _plug_get_password(params->utils, &text->password,
+                                             &text->free_password, prompt_need);
+            if (pass_result != SASL_OK && pass_result != SASL_INTERACT) {
+                result = pass_result;
+                goto cleanup;
+            }
+        }
+
+        if (text->password != NULL) {
+            gss_buffer_desc password_buf;
+
+            password_buf.length = text->password->len;
+            password_buf.value = text->password->data;
+
+            maj_stat = gss_acquire_cred_with_password(&min_stat,
+                                                      text->client_name,
+                                                      &password_buf,
+                                                      GSS_C_INDEFINITE,
+                                                      &mechs,
+                                                      GSS_C_INITIATE,
+                                                      &text->client_creds,
+                                                      NULL,
+                                                      &text->lifetime);
+            if (GSS_ERROR(maj_stat))
+                goto cleanup;
+        }
+    }
+
+    maj_stat = GSS_S_COMPLETE;
+
+interact:
+
+    /* free prompts we got */
+    if (prompt_need && *prompt_need) {
+        params->utils->free(*prompt_need);
+        *prompt_need = NULL;
+    }
+
+    /* if there are prompts not filled in */
+    if (user_result == SASL_INTERACT || auth_result == SASL_INTERACT ||
+        pass_result == SASL_INTERACT) {
+        /* make the prompt list */
+        result =
+            _plug_make_prompts(params->utils, prompt_need,
+                               user_result == SASL_INTERACT ?
+                               "Please enter your authorization name" : NULL,
+                               NULL,
+                               auth_result == SASL_INTERACT ?
+                               "Please enter your authentication name" : NULL,
+                               NULL,
+                               pass_result == SASL_INTERACT ?
+                               "Please enter your password" : NULL, NULL,
+                               NULL, NULL, NULL,
+                               NULL,
+                               NULL, NULL);
+        if (result == SASL_OK)
+            result = SASL_INTERACT;
+    }
+
+cleanup:
+    if (result == SASL_OK && maj_stat != GSS_S_COMPLETE) {
+        sasl_gss_seterror(text->utils, maj_stat, min_stat);
+        result = SASL_FAIL;
+    }
+
+    gss_release_buffer(&min_stat, &cred_authid);
+
+    return result;
 }

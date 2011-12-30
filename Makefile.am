@@ -77,7 +77,7 @@ dist-hook:
 	@find $(distdir) -name CVS -print | xargs -t rm -rf
 	(cd $(distdir)/plugins && sh makeinit.sh)
 
-framedir = /Library/Frameworks/SASL2.framework
+framedir = $(DESTDIR)/Library/Frameworks/SASL2.framework
 install-exec-local: $(INSTALLOSX)
 	@if test "$(plugindir)" != "$(prefix)/lib/sasl2"; then \
 	  echo "********************************************************"; \

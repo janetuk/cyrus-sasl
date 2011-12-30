@@ -65,7 +65,7 @@ libsasl2_la_DEPENDENCIES = $(LTLIBOBJS)
 libsasl2_la_LIBADD = $(LTLIBOBJS) $(SASL_DL_LIB) $(LIB_SOCKET) $(LIB_DOOR)
 
 if MACOSX
-framedir = /Library/Frameworks/SASL2.framework
+framedir = $(DESTDIR)/Library/Frameworks/SASL2.framework
 install-exec-hook:
 	$(mkinstalldirs) $(framedir)/Versions/A
 	ln -fs $(libdir)/libsasl2.dylib $(framedir)/Versions/A/SASL2

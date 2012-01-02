@@ -59,7 +59,7 @@ EXTRA_DIST = NTMakefile
 DISTCLEANFILES = md5global.h
 
 if MACOSX
-framedir = $(DESTDIR)/Library/Frameworks/SASL2.framework
+framedir = /Library/Frameworks/SASL2.framework
 frameheaderdir = $(framedir)/Versions/A/Headers
 frameheader_DATA = $(saslinclude_HEADERS)
 endif

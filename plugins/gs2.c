@@ -766,7 +766,7 @@ static int gs2_client_mech_step(void *conn_context,
             goto cleanup;
     }
 
-    req_flags = GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG;
+    req_flags = GSS_C_SEQUENCE_FLAG;
 
     maj_stat = gss_init_sec_context(&min_stat,
                                     (params->gss_creds != GSS_C_NO_CREDENTIAL)
@@ -1317,7 +1317,7 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
 static int gs2_indicate_mechs(const sasl_utils_t *utils)
 {
     OM_uint32 major, minor;
-    gss_OID_desc desired_oids[3];
+    gss_OID_desc desired_oids[2];
     gss_OID_set_desc desired_attrs;
     gss_OID_desc except_oids[3];
     gss_OID_set_desc except_attrs;
@@ -1326,8 +1326,7 @@ static int gs2_indicate_mechs(const sasl_utils_t *utils)
         return SASL_OK;
 
     desired_oids[0] = *GSS_C_MA_AUTH_INIT;
-    desired_oids[1] = *GSS_C_MA_AUTH_TARG;
-    desired_oids[2] = *GSS_C_MA_CBINDINGS;
+    desired_oids[1] = *GSS_C_MA_CBINDINGS;
     desired_attrs.count = sizeof(desired_oids)/sizeof(desired_oids[0]);
     desired_attrs.elements = desired_oids;
 

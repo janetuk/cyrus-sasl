@@ -440,11 +440,6 @@ gs2_server_mech_step(void *conn_context,
 
     assert(maj_stat == GSS_S_COMPLETE);
 
-    if ((out_flags & GSS_C_SEQUENCE_FLAG) == 0)  {
-        ret = SASL_BADAUTH;
-        goto cleanup;
-    }
-
     maj_stat = gss_display_name(&min_stat, text->client_name,
                                 &name_buf, NULL);
     if (GSS_ERROR(maj_stat))
@@ -689,7 +684,7 @@ static int gs2_client_mech_step(void *conn_context,
     gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
     gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
     OM_uint32 maj_stat = GSS_S_FAILURE, min_stat = 0;
-    OM_uint32 req_flags, ret_flags;
+    OM_uint32 ret_flags;
     int ret = SASL_FAIL;
     int initialContextToken;
 
@@ -766,8 +761,6 @@ static int gs2_client_mech_step(void *conn_context,
             goto cleanup;
     }
 
-    req_flags = GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG;
-
     maj_stat = gss_init_sec_context(&min_stat,
                                     (params->gss_creds != GSS_C_NO_CREDENTIAL)
                                         ? (gss_cred_id_t)params->gss_creds
@@ -775,7 +768,7 @@ static int gs2_client_mech_step(void *conn_context,
                                     &text->gss_ctx,
                                     text->server_name,
                                     (gss_OID)text->mechanism,
-                                    req_flags,
+                                    GSS_C_MUTUAL_FLAG,
                                     GSS_C_INDEFINITE,
                                     &text->gss_cbindings,
                                     serverinlen ? &input_token : GSS_C_NO_BUFFER,
@@ -814,10 +807,12 @@ static int gs2_client_mech_step(void *conn_context,
     if (GSS_ERROR(maj_stat))
         goto cleanup;
 
-    if ((ret_flags & req_flags) != req_flags) {
+#if 0
+    if ((ret_flags & GSS_C_MUTUAL_FLAG) == 0) {
         maj_stat = SASL_BADAUTH;
         goto cleanup;
     }
+#endif
 
     maj_stat = gss_display_name(&min_stat,
                                 text->client_name,
@@ -1317,7 +1312,7 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
 static int gs2_indicate_mechs(const sasl_utils_t *utils)
 {
     OM_uint32 major, minor;
-    gss_OID_desc desired_oids[3];
+    gss_OID_desc desired_oids[2];
     gss_OID_set_desc desired_attrs;
     gss_OID_desc except_oids[3];
     gss_OID_set_desc except_attrs;
@@ -1326,8 +1321,7 @@ static int gs2_indicate_mechs(const sasl_utils_t *utils)
         return SASL_OK;
 
     desired_oids[0] = *GSS_C_MA_AUTH_INIT;
-    desired_oids[1] = *GSS_C_MA_AUTH_TARG;
-    desired_oids[2] = *GSS_C_MA_CBINDINGS;
+    desired_oids[1] = *GSS_C_MA_CBINDINGS;
     desired_attrs.count = sizeof(desired_oids)/sizeof(desired_oids[0]);
     desired_attrs.elements = desired_oids;
 

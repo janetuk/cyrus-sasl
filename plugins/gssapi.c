@@ -50,8 +50,9 @@
 #else
 #include <gssapi/gssapi.h>
 #endif
-
+#ifdef HAVE_GSSAPI_GSSAPI_EXT_H
 #include <gssapi/gssapi_ext.h>
+#endif
 #ifdef WIN32
 #  include <winsock2.h>
 

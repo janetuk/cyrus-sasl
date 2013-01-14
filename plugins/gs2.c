@@ -807,12 +807,11 @@ static int gs2_client_mech_step(void *conn_context,
     if (GSS_ERROR(maj_stat))
         goto cleanup;
 
-#if 0
-    if ((ret_flags & GSS_C_MUTUAL_FLAG) == 0) {
+    if (params->cbindingdisp != SASL_CB_DISP_NONE &&
+        (ret_flags & GSS_C_MUTUAL_FLAG) == 0) {
         maj_stat = SASL_BADAUTH;
         goto cleanup;
     }
-#endif
 
     maj_stat = gss_display_name(&min_stat,
                                 text->client_name,
@@ -1280,7 +1279,7 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
     }
 
     *security_flags = SASL_SEC_NOPLAINTEXT | SASL_SEC_NOACTIVE;
-    *features = SASL_FEAT_WANT_CLIENT_FIRST | SASL_FEAT_CHANNEL_BINDING;
+    *features = SASL_FEAT_WANT_CLIENT_FIRST;
     if (prompts != NULL)
         *prompts = gs2_required_prompts;
 
@@ -1294,8 +1293,10 @@ gs2_get_mech_attrs(const sasl_utils_t *utils,
         *security_flags |= SASL_SEC_NOANONYMOUS;
     if (MA_PRESENT(GSS_C_MA_DELEG_CRED))
         *security_flags |= SASL_SEC_PASS_CREDENTIALS;
-    if (MA_PRESENT(GSS_C_MA_AUTH_TARG))
+    if (MA_PRESENT(GSS_C_MA_AUTH_TARG)) {
+        *features |= SASL_FEAT_CHANNEL_BINDING;
         *security_flags |= SASL_SEC_MUTUAL_AUTH;
+    }
     if (MA_PRESENT(GSS_C_MA_AUTH_INIT_INIT) && prompts != NULL)
         *prompts = NULL;
     if (MA_PRESENT(GSS_C_MA_ITOK_FRAMED))

@@ -838,7 +838,7 @@ cleanup:
 
     if (ret == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-        ret = (maj_stat == GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
+        ret = (maj_stat & GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
     }
     if (ret < SASL_OK)
         sasl_gs2_free_context_contents(text);
@@ -1708,7 +1708,7 @@ interact:
 cleanup:
     if (result == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-        result = (maj_stat == GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
+        result = (maj_stat & GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
     }
 
     gss_release_buffer(&min_stat, &cred_authid);

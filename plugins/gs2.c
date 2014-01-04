@@ -97,6 +97,10 @@
 #define GS2_CB_FLAG_Y       0x02
 #define GS2_NONSTD_FLAG     0x10
 
+#ifndef GSS_S_PROMPTING_NEEDED
+#define GSS_S_PROMPTING_NEEDED (1 << (GSS_C_SUPPLEMENTARY_OFFSET + 5))
+#endif
+
 typedef struct context {
     gss_ctx_id_t gss_ctx;
     gss_name_t client_name;
@@ -834,7 +838,7 @@ cleanup:
 
     if (ret == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-        ret = SASL_FAIL;
+        ret = (maj_stat == GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
     }
     if (ret < SASL_OK)
         sasl_gs2_free_context_contents(text);
@@ -1704,7 +1708,7 @@ interact:
 cleanup:
     if (result == SASL_OK && maj_stat != GSS_S_COMPLETE) {
         sasl_gs2_seterror(text->utils, maj_stat, min_stat);
-        result = SASL_FAIL;
+        result = (maj_stat == GSS_S_PROMPTING_NEEDED) ? SASL_INTERACT : SASL_FAIL;
     }
 
     gss_release_buffer(&min_stat, &cred_authid);
